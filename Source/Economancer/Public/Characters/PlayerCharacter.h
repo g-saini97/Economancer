@@ -29,7 +29,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	//setters and getters
+	//setters and getters , mostly getters
 	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
 	FORCEINLINE EPlayerState GetPlayerState() const { return PlayerState; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
@@ -38,9 +38,11 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-
 	float moveSpeedOffset;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float sprintSpeedOffset;
+	
 	float defaultSpeedOffset;
 	float velocity;
 	bool isFalling;
@@ -144,7 +146,6 @@ private:
 	TObjectPtr<AWeapon> equippedWeapon;
 
 	UPROPERTY(VisibleAnywhere)
-
 	TArray<AWeapon*> availibleWeapons;
 
 

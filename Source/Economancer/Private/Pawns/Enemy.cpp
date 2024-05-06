@@ -17,6 +17,7 @@ AEnemy::AEnemy()
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 }
 
+
 void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();

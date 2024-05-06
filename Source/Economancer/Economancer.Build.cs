@@ -9,7 +9,16 @@ public class Economancer : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "FieldSystemEngine", "Niagara" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", 
+			"CoreUObject",
+			"Engine", "InputCore", 
+			"EnhancedInput", 
+			"FieldSystemEngine", 
+			"Niagara",
+			"AIModule",
+			"GameplayTasks",
+			"NavigationSystem"
+		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
