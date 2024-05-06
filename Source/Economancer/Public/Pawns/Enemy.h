@@ -22,7 +22,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	float Health = 100;
+	float Health = 95;
 
 public:	
 	
