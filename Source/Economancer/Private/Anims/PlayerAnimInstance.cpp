@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Anims/PlayerAnimInstance.h"
 #include "Characters/PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -17,6 +16,7 @@ void UPlayerAnimInstance::NativeInitializeAnimation()
 	{
 		playerMovement =  playerCharacter->GetCharacterMovement(); // getting the  player character's speed
 	}
+
 
 }
 
