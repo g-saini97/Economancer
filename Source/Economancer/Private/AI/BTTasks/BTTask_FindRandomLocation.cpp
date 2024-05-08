@@ -16,11 +16,13 @@ EBTNodeResult::Type UBTTask_FindRandomLocation::ExecuteTask(UBehaviorTreeCompone
 	// get the AI controller and its owner(NPC)..../// Learned about the auto keyword here, wow
 	if (auto* const controller = Cast<ANPC_AIController>(OwnerComponent.GetAIOwner()))
 	{
-		if (auto* const enemy = controller->GetPawn()) // get the Enemy NPC
+		if (auto* const NPC = controller->GetPawn()) // get the Enemy NPC
 		{
-			auto const Origin = enemy->GetActorLocation(); // get the location of the Enemy NPC
+			auto const Origin = NPC->GetActorLocation(); // get the location of the Enemy NPC
+			
 			if (auto* const NavigationSystem = UNavigationSystemV1::GetCurrent(GetWorld())) // get the navigation system of the current world 
 			{
+				
 				FNavLocation Loc;
 				if (NavigationSystem->GetRandomPointInNavigableRadius(Origin, SearchRadius, Loc)) // looks for a random point on the navmesh and puts the output in Location
 				{

@@ -1,26 +1,24 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-//// Personal Note: After a lot of pain trying to use this for the AI classes as well,
-//// ended up making a seperate anim instance class for AI NPCs
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "Characters/PlayerTypes.h"
-#include "PlayerAnimInstance.generated.h"
+#include "AI/AICharacterTypes.h"
+#include "AIAnimInstance.generated.h"
 
 
-//Forward Declarations
-class APlayerCharacter;
+class ANPCCharacter;
 class UCharacterMovementComponent;
-
-
+class ANPC_AIController;
+/**
+ * 
+ */
 UCLASS()
-class ECONOMANCER_API UPlayerAnimInstance : public UAnimInstance
+class ECONOMANCER_API UAIAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
-	
+
 public:
 
 	virtual void NativeInitializeAnimation() override;
@@ -29,10 +27,13 @@ public:
 	FRotator calculateYawPitch();
 
 	UPROPERTY(BlueprintReadOnly, Category = "Character")
-	TObjectPtr<APlayerCharacter> playerCharacter;
+	TObjectPtr<ANPCCharacter> AICharacter;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Character")
+	TObjectPtr<ANPC_AIController> AIController;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	TObjectPtr<UCharacterMovementComponent> playerMovement;
+	TObjectPtr<UCharacterMovementComponent> AIMovement;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement");
 	float xySpeed;// character's speed on the ground
@@ -50,13 +51,7 @@ public:
 	bool isAiming;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement | Character State")
-	EPlayerState PlayerState;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Aim Direction");
-	FRotator playerCameraRotation;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Aim Direction");
-	FVector playerCameraLocation;
+	EAIState AIState;
 
 	/////// vars for yaw and pitch calculations or the aim offset. Do not touch (aiming will break)
 	FRotator CurrentRotation;
@@ -69,5 +64,4 @@ public:
 
 
 	///// Note to self, many fo these definitly do not have to be public will refactor later
-
 };

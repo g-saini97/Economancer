@@ -10,6 +10,8 @@
 #include "Items/Item.h"
 #include "Items/Weapon.h"
 #include "DrawDebugHelpers.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 
 
@@ -34,6 +36,9 @@ APlayerCharacter::APlayerCharacter()
 	camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	camera->SetupAttachment(springArm);
 
+
+	// setting up the stimulus source for the NPC's perception system
+	SetupStimulusSource();
 }
 
 void APlayerCharacter::BeginPlay()
@@ -339,5 +344,15 @@ bool APlayerCharacter::canShoot()
 	else
 	{
 		return false;
+	}
+}
+
+void APlayerCharacter::SetupStimulusSource()
+{
+	stimulusSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("StimulusSource"));
+	if (stimulusSource)
+	{
+		stimulusSource->RegisterForSense(TSubclassOf<UAISense_Sight>());
+		stimulusSource->RegisterWithPerceptionSystem();
 	}
 }

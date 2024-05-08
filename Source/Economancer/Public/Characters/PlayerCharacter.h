@@ -15,6 +15,7 @@ class UInputMappingContext;
 class UInputAction;
 class AItem;
 class AWeapon;
+class UAIPerceptionStimuliSourceComponent;
 
 
 
@@ -125,6 +126,14 @@ protected:
 	bool canAim();
 	bool canShoot();
 	
+	
+	// Perception system functions here
+
+	/// for the perception system of the NPCs
+
+	TObjectPtr<UAIPerceptionStimuliSourceComponent> stimulusSource;
+
+	void SetupStimulusSource();
 
 	
 private:
@@ -147,6 +156,8 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	TArray<AWeapon*> availibleWeapons;
+
+
 
 
 };

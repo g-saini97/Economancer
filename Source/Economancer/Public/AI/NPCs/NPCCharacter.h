@@ -7,31 +7,47 @@
 #include "BehaviorTree/BehaviorTree.h" 
 #include "Interfaces/ShotInterFace.h"
 #include "AI/AICharacterTypes.h"
-#include "Enemy.generated.h"
+#include "NPCCharacter.generated.h"
 
 UCLASS()
-class ECONOMANCER_API AEnemy : public ACharacter, public IShotInterFace
+class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace
 {
 	GENERATED_BODY()
 
 public:
-	AEnemy();
+	ANPCCharacter();
 
 	// getter for the AI controller 
 	FORCEINLINE TObjectPtr<UBehaviorTree> GetBehaviorTree() const { return BTree; };
+	FORCEINLINE EAIState GetAIState() const { return PlayerState; }
+	FORCEINLINE bool GetAimBool() const { return isAiming; };
+	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
+	FORCEINLINE bool IsAPatrol() const { return bIsPatrol; };
+
 
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	// override of the shothit interface's GetShot() declaration
 	virtual void GetShot(const FHitResult& hitPoint);
-	
+
 
 protected:
 	virtual void BeginPlay() override;
-
+	// Stats
 	float Health = 95;
+
+
+	//Conditions
+	bool isAiming;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI Parameters", meta = (AllowPrivateAccess = "true"));
+	bool bIsGuard = true;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI Parameters", meta = (AllowPrivateAccess = "true"));
+	bool bIsPatrol = false;
+
+
 
 	// Personal Note, I keep forgetting that I have to add these in the editor, the AIController needs this 
 	// Also, in the editor, replace the default AIController with NPC_AIController  
@@ -41,7 +57,7 @@ protected:
 
 private:
 
-	EAIState PlayerState = EPlayerState::EPS_Uneqipped;
+	EAIState PlayerState = EAIState::EAIS_Uneqipped;
 
 
 };
