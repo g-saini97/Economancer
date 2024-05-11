@@ -50,8 +50,8 @@ void ANPC_AIController::SetupPerceptionSystem()
 	if (SightConfig)
 	{
 		SetPerceptionComponent(*CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component"))); // This sets the current perception component for the system
-		SightConfig->SightRadius = 700.f;
-		SightConfig->LoseSightRadius = SightConfig->SightRadius + 100.f;
+		SightConfig->SightRadius = 1200.f;
+		SightConfig->LoseSightRadius = SightConfig->SightRadius + 200.f;
 		SightConfig->PeripheralVisionAngleDegrees = 115.f;
 		SightConfig->SetMaxAge(5.f);
 		SightConfig->AutoSuccessRangeFromLastSeenLocation = 250.f;

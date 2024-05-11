@@ -24,11 +24,11 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaTime)
 {
 	Super::NativeUpdateAnimation(DeltaTime);
 
+
 	if (playerMovement)
 	{
 		xySpeed = UKismetMathLibrary::VSizeXY(playerMovement->Velocity); // speed of character on the ground plane.
 		isFalling = playerMovement->IsFalling();
-
 		PlayerState = playerCharacter->GetPlayerState();
 		isAiming = playerCharacter->GetAimBool();
 

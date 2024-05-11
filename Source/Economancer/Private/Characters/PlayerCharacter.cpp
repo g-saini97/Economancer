@@ -31,7 +31,7 @@ APlayerCharacter::APlayerCharacter()
 	//Setting up components
 	springArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	springArm->SetupAttachment(GetRootComponent());
-	springArm->TargetArmLength = 400.f;
+	springArm->TargetArmLength = springArmDefault;
 
 	camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	camera->SetupAttachment(springArm);
@@ -87,14 +87,15 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		enhancedComponent->BindAction(sprintAction, ETriggerEvent::Triggered, this, &APlayerCharacter::SprintStart);
 		enhancedComponent->BindAction(sprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::SprintEnd);
 		enhancedComponent->BindAction(pickUpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Pickup);
-		enhancedComponent->BindAction(attackAction, ETriggerEvent::Triggered, this, &APlayerCharacter::AttackStart);
-		enhancedComponent->BindAction(attackAction, ETriggerEvent::Completed, this, &APlayerCharacter::AttackEnd);
-		enhancedComponent->BindAction(aimAction, ETriggerEvent::Triggered, this, &APlayerCharacter::AimStart);
+		enhancedComponent->BindAction(aimAction, ETriggerEvent::Started, this, &APlayerCharacter::AimStart);
 		enhancedComponent->BindAction(aimAction, ETriggerEvent::Completed, this, &APlayerCharacter::AimEnd);
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::AttackStart);
+		enhancedComponent->BindAction(shootAction, ETriggerEvent::Completed, this, &APlayerCharacter::AttackReleased);
+		
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Completed, this, &APlayerCharacter::AttackEnd);
+		enhancedComponent->BindAction(switchFireMode, ETriggerEvent::Completed, this, &APlayerCharacter::SwitchFireMode);
 
-
+		
 		// bindings to prevent contineous jumping from the space bar being held down
 		enhancedComponent->BindAction(jumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		enhancedComponent->BindAction(jumpAction, ETriggerEvent::Completed, this, &APlayerCharacter::CustomJumpEnd);
@@ -167,6 +168,8 @@ void APlayerCharacter::AimStart(const FInputActionValue& value)
 	{
 		isAiming = true;
 		doOnceAim = false;
+		
+		this->springArm->TargetArmLength = springArmZoomed;
 	}
 }
 
@@ -177,24 +180,45 @@ void APlayerCharacter::AimEnd(const FInputActionValue& value)
 	if (PlayerState != EPlayerState::EPS_Uneqipped)
 	{
 		equippedWeapon->AimEnd();
-
+		float interpZoomLength = UKismetMathLibrary::FInterpTo(springArmZoomed, springArmDefault, GetWorld()->DeltaTimeSeconds,0.5f);
+		this->springArm->TargetArmLength = springArmDefault;
 	}
 }
 
+void APlayerCharacter::SwitchFireMode(const FInputActionValue& value)
+{
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow, TEXT("SwitchPressed"));
+	if (PlayerState != EPlayerState::EPS_Uneqipped)
+	{
+		equippedWeapon->FireModeSelect();
+	}
+}	
+
 void APlayerCharacter::AttackStart(const FInputActionValue& value)
 {
-
+	doOnceShoot = true;
 	if (canShoot())
 	{
 		isAiming = true;
 		equippedWeapon->Shoot(this->GetController());
-		doOnceShoot = false;
 	}
 }
 
-void APlayerCharacter::AttackEnd(const FInputActionValue& value)
+void APlayerCharacter::AttackReleased(const FInputActionValue& value)
 {
-	doOnceShoot = true;
+	if (PlayerState != EPlayerState::EPS_Uneqipped)
+	{
+		equippedWeapon->TriggerRelease();
+	}
+}
+
+void APlayerCharacter::AttackEnd()
+{
+	if (canShoot())
+	{
+		doOnceShoot = false;
+	}
 }
 
 void APlayerCharacter::CustomJump(const FInputActionValue& value)
@@ -204,7 +228,6 @@ void APlayerCharacter::CustomJump(const FInputActionValue& value)
 		bDoWallJump = true;
 	}
 }
-
 
 void APlayerCharacter::CustomJumpEnd(const FInputActionValue& value)
 {

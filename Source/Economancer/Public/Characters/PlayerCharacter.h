@@ -34,10 +34,9 @@ public:
 	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
 	FORCEINLINE EPlayerState GetPlayerState() const { return PlayerState; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
-
+	FORCEINLINE AWeapon* GetEquppedWeapon() const{if (equippedWeapon){return equippedWeapon;}else{return nullptr; }} // in case somthing wants to know the weapon that the player is holding.
 protected:
 	virtual void BeginPlay() override;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float moveSpeedOffset;
 	
@@ -49,12 +48,13 @@ protected:
 	bool isFalling;
 	bool doOnceJump = true;
 	
-	bool doOnceShoot = true;
+	bool doOnceShoot = false;
 	bool doOnceAim = true;
 	bool isAiming;
 	bool bIsHolstered = false;
 	FRotator cameraRotation; //to be seen by the anim instance
-
+	float springArmDefault = 300.f;
+	float springArmZoomed = 150.f;
 
 
 
@@ -71,7 +71,9 @@ protected:
 	FRotator traceRotation; // the rotation of the player to calculate traceEnd;
 	FCollisionQueryParams traceParams; // params for the line trace (Note for later: Check documentation for what these mystery params are. )
 	
-	
+	/// <summary>
+	/// Input Actions and The Context
+	/// </summary>
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputMappingContext> inputMapContext;
 
@@ -89,9 +91,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> pickUpAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	TObjectPtr<UInputAction> attackAction;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> aimAction;
@@ -101,6 +100,9 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> holsterAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> switchFireMode;
 	
 	//Movement function declarations 
 	void Move(const FInputActionValue& value);
@@ -109,9 +111,11 @@ protected:
 	void SprintEnd(const FInputActionValue& value);
 	void Pickup(const FInputActionValue& value);
 	void AttackStart(const FInputActionValue & value);
-	void AttackEnd(const FInputActionValue& value);
+	void AttackReleased(const FInputActionValue& value);
+	void AttackEnd();
 	void AimStart(const FInputActionValue& value);
 	void AimEnd (const FInputActionValue& value);
+	void SwitchFireMode(const FInputActionValue& value);
 	void CustomJump(const FInputActionValue& value);
 	void CustomJumpEnd(const FInputActionValue& value);
 	void Holster(const FInputActionValue& value);

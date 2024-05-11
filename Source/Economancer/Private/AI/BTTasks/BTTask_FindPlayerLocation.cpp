@@ -2,6 +2,7 @@
 
 
 #include "AI/BTTasks/BTTask_FindPlayerLocation.h"
+
 #include "NavigationSystem.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/Character.h"
@@ -13,45 +14,6 @@ UBTTask_FindPlayerLocation::UBTTask_FindPlayerLocation(FObjectInitializer const&
 {
 	NodeName = "Find Player's Location on NavMesh";
 }
-
-/*EBTNodeResult::Type UBTTask_FindPlayerLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComponent, uint8* NodeMemory)
-{
-	// get player character
-	if (auto* const PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
-	{
-		// getting the AINPC's controller and pawn's location
-		auto* const NPCController = Cast<ANPC_AIController>(OwnerComponent.GetAIOwner());
-		auto* const NPCPawn = NPCController->GetPawn();
-		auto const NPCLocation = NPCPawn->GetActorLocation();
-		// get player location
-		auto const PlayerLocation = PlayerCharacter->GetActorLocation();
-
-		if (SearchRandom)
-		{
-			FNavLocation loc;
-			//get the nav system to get a random location around the NPC, dictated by the search radius
-			if (auto* const NavigationSystem = UNavigationSystemV1::GetCurrent(GetWorld()))
-			{
-				if (NavigationSystem->GetRandomPointInNavigableRadius(NPCLocation, SearchRadius, loc)) // loc stores the output of this function
-				{
-					OwnerComponent.GetBlackboardComponent()->SetValueAsVector(GetSelectedBlackboardKey(), loc.Location); // setting the keylocation to a random point with the search radius of the player
-					FinishLatentTask(OwnerComponent, EBTNodeResult::Succeeded); // first success condition
-					return EBTNodeResult::Succeeded;
-				}
-
-			}
-		}
-		else
-
-		{
-			OwnerComponent.GetBlackboardComponent()->SetValueAsVector(GetSelectedBlackboardKey(), PlayerLocation); // Key set to the exact player location
-			FinishLatentTask(OwnerComponent, EBTNodeResult::Succeeded); // second success condition
-			return EBTNodeResult::Succeeded;
-		}
-	}
-	return EBTNodeResult::Failed;
-}
-*/
 
 EBTNodeResult::Type UBTTask_FindPlayerLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComponent, uint8* NodeMemory)
 {
@@ -70,8 +32,13 @@ EBTNodeResult::Type UBTTask_FindPlayerLocation::ExecuteTask(UBehaviorTreeCompone
         return EBTNodeResult::Failed;
     }
 
+    if (auto const NPCActor = Cast<ANPCCharacter>(NPCController->GetPawn()))
+    {
+     
+    }
     auto const NPCLocation = NPCPawn->GetActorLocation();
     auto const PlayerLocation = PlayerCharacter->GetActorLocation();
+
 
     if (SearchRandom)
     {

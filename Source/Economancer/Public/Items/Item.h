@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-//#include "Components/PrimitiveComponent.h"
 #include "Item.generated.h"
 
 
@@ -12,6 +11,7 @@
 class UStaticMeshComponent;
 class USphereComponent;
 class USkeletalMeshComponent;
+class APlayerCharacter;
 
 
 UCLASS()
@@ -41,6 +41,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USkeletalMeshComponent> skeletalMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<APlayerCharacter> PlayerCharacter; // i want this to be a ref to the player when they are holding the item
 
 private:
 	

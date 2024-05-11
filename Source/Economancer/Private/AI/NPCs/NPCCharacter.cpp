@@ -2,6 +2,8 @@
 
 
 #include "AI/NPCs/NPCCharacter.h"
+#include "Items/Item.h"
+#include "Items/Weapon.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,7 +13,7 @@
 
 ANPCCharacter::ANPCCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	// if enemy collision detection or visibility is janky, start investigating here.
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
@@ -34,9 +36,15 @@ void ANPCCharacter::BeginPlay()
 
 }
 
+
+
 void ANPCCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	if (overlappingItem)
+	{
+		PickUpWeapon();
+	}
 }
 
 void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -46,7 +54,49 @@ void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 }
 
 
-void ANPCCharacter::GetShot(const FHitResult& hit)
+
+
+void ANPCCharacter::PickUpWeapon() // right now the AI only picks up on overlap, it does not seek out these weapons
+{
+	TObjectPtr<AWeapon> overlappingWeapon = Cast<AWeapon>(overlappingItem);
+	if (overlappingWeapon)
+	{
+		overlappingWeapon->Equip(GetMesh(), FName("hand_LSocket"));
+		overlappingItem = nullptr; // setting ovelapping item to nullptr because it kept pointing to the weapon currently euiped and player could not pickup a new weapon if they had picked one up already.
+		equippedWeapon = overlappingWeapon;
+		availibleWeapons.Add(equippedWeapon);
+		PlayerState = EAIState::EAIS_EquippedOneHanded;
+	}
+}
+
+void ANPCCharacter::Shoot()
+{
+	return;
+}
+
+
+
+void ANPCCharacter::ReactToBulletHit( FHitResult Hit)
+{
+
+	Health -= 50;
+	if (Health <= 0)
+	{
+		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->Deactivate();
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		GetMesh()->SetAllBodiesSimulatePhysics(true);
+		//GetMesh()->WakeAllRigidBodies();
+		FVector ImpulseVector = (Hit.ImpactPoint - Hit.TraceStart).GetSafeNormal();
+		GetMesh()->AddImpulseAtLocation(ImpulseVector * 8000.f, Hit.ImpactPoint, Hit.BoneName);
+		GetCapsuleComponent()->Deactivate();
+	}
+}
+
+// INterface implementations 
+void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a raycasted weapon
+
 {
 	Health -= 50;
 	DEBUG_SPHERE_SPAWNER_COLORED(hit.ImpactPoint, FColor::Green);
@@ -64,4 +114,11 @@ void ANPCCharacter::GetShot(const FHitResult& hit)
 
 
 }
+/// use if bing hit with a raycasted weapon
+
+
+
+
+
+
 

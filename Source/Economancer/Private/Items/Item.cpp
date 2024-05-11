@@ -7,6 +7,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/PrimitiveComponent.h" 
 #include "Characters/PlayerCharacter.h"
+#include "AI/NPCs/NPCCharacter.h"
 
 
 AItem::AItem()
@@ -31,12 +32,15 @@ void AItem::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 	//{
 	//	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::Yellow, othername);
 	//}
-	TObjectPtr<APlayerCharacter> playerChatacter = Cast<APlayerCharacter>(OtherActor);
-	if (playerChatacter)
+	
+	if (PlayerCharacter = Cast<APlayerCharacter>(OtherActor))
 	{
-		playerChatacter->SetOverlappingItem(this);
+		PlayerCharacter->SetOverlappingItem(this);
 	}
-
+	if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor)) // Note to self, Store the reference to the NPC character as well , later
+	{
+		NPCCharacter->SetOverlappingItem(this);
+	}
 }
 
 void AItem::onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -46,12 +50,14 @@ void AItem::onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	//{
 	//	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::Yellow, overlapEndMessage);
 	//}
-
-	TObjectPtr<APlayerCharacter> playerChatacter = Cast<APlayerCharacter>(OtherActor);
-	if (playerChatacter)
+	if (TObjectPtr<APlayerCharacter> playerChatacter = Cast<APlayerCharacter>(OtherActor))
 	{
 		playerChatacter->SetOverlappingItem(nullptr); //sending null ptr to the character since the character is responsible for attacthment
 	}											// so that the player cannot pick it up after they have stopped overlapping with the item
+	if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor))
+	{
+		NPCCharacter->SetOverlappingItem(nullptr);
+	}
 }
 
 

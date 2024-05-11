@@ -5,55 +5,36 @@
 #include "CoreMinimal.h"
 #include "Items/Item.h"
 #include "WeaponTypes.h"
+#include "Interfaces/Animation/AnimatableWeapon.h"
+#include "ItemProperties/WeaponFireModes.h"
 #include "Weapon.generated.h"
 
+class USceneComponent;
 class UFieldSystemComponent;
 class UNiagaraComponent;
 class UNiagaraSystem;
+class ABullet;
+
 
 UCLASS()
-class ECONOMANCER_API AWeapon : public AItem
+class ECONOMANCER_API AWeapon : public AItem, public IAnimatableWeapon
 {
 	GENERATED_BODY()
 public:
 	AWeapon();
 
-	void Equip(TObjectPtr<USceneComponent> inParent, FName(inSocketName));
+	
+
+	// Need to be public because player has to access it
 	void Shoot(AController* playerController);
 	void Aim(AController* playerController);
 	void AimEnd();
-
-	// utility
+	void Equip(TObjectPtr<USceneComponent> inParent, FName(inSocketName));
+	void FireModeSelect();
+	void TriggerRelease();
 	void AttatchToPlayerSocket(TObjectPtr<USceneComponent> inParent, const FName& inSocketName);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	EWeaponType WeaponType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	float fireRate;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	bool fireMode;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	float range =  400.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
-	float roundCapacity;
-
-
-	// did not show up in the editor if these were in the private section, crashed the editor as soon as any derived BP was opned.
-	UPROPERTY(EditAnywhere, Category = "MuzzleFlashVFX")
-	class UNiagaraSystem* MuzzleVfxSystem;
-	
-	UPROPERTY(EditAnywhere, Category = "MuzzleFlashVFX")
-	class UNiagaraComponent* MuzzleVfxComponent;
-
-	UPROPERTY(EditAnywhere, Category = "ShellVFX")
-	class UNiagaraSystem* ShellEjectionSystem;
-
-	UPROPERTY(EditAnywhere, Category = "ShellVFX")
-	class UNiagaraComponent* ShellEjectionComponent;
+	virtual bool IsFiring() const override;
 
 protected:
 	
@@ -61,24 +42,67 @@ protected:
 
 	virtual void onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	void CreateFields(const FHitResult& hit);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeaponAttributes, meta = (AllowPrivateAccess = "true")) // the handedness of the weapon
+	EWeaponType WeaponType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeaponAttributes, meta = (AllowPrivateAccess = "true")) // FireMode Enum
+	EWeaponFireMode FireMode;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeaponAttributes, meta = (AllowPrivateAccess = "true"))
+	float fireRate;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	float range = 400.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	float roundCapacity;
+
+	float shotLimit = 0.f ;
+	float shotsTaken = 0.f;
 
 	FCollisionQueryParams traceParams;
 	FHitResult shotHit;
 	FHitResult aimHit;
 	bool bIsHit;
+	bool bCanFire = true;
+	bool bShotFired = false;
+	
+	void ResetChamber();
+	void MuzzleFlash();
+	void ShellEject();
+	AActor* ShootBullet(FVector Endpoint, AController* playerController);
+	
+	
+
+	// utility
+	void CreateFields(const FHitResult& hit);
 
 private:
 
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<USceneComponent> Muzzle;
+	UPROPERTY(EditAnywhere, Category = "MuzzleFlashVFX", meta = (AllowPrivateAccess = "true"))
+	UNiagaraSystem* MuzzleVfxSystem;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere, Category = "MuzzleFlashVFX", meta = (AllowPrivateAccess = "true"))
+	UNiagaraComponent* MuzzleVfxComponent; // Using Tobjectptr for this crashes the game, it compiles but don't revert it to TObjectptr again
+
+	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
+	UNiagaraSystem* ShellEjectionSystem;
+
+	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
+	UNiagaraComponent* ShellEjectionComponent;
+	
+	UPROPERTY(EditAnywhere, Category = "Bullet Type", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<ABullet> BulletType; /// So that we can choose which kind of bullet a weapon fires from within the blueprint editor of any derived weapon editor 
+	
+	UPROPERTY(EditAnywhere, Category = "MuzzleVFX", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USceneComponent> MuzzleComponent;
+
+	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USceneComponent> ShellEjector;
 
-	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UFieldSystemComponent> Field;
 	
-	
-	
+	FTimerHandle ShootTimerHandle;
+
 };

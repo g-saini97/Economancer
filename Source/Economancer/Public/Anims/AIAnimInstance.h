@@ -63,5 +63,5 @@ public:
 	FRotator calculatedRotaion;
 
 
-	///// Note to self, many fo these definitly do not have to be public will refactor later
+	///// Note to self, many of these definitly do not have to be public will refactor later
 };

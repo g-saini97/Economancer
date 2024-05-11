@@ -9,6 +9,9 @@
 #include "AI/AICharacterTypes.h"
 #include "NPCCharacter.generated.h"
 
+class AItem;
+class AWeapon;
+
 UCLASS()
 class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace
 {
@@ -20,17 +23,27 @@ public:
 	// getter for the AI controller 
 	FORCEINLINE TObjectPtr<UBehaviorTree> GetBehaviorTree() const { return BTree; };
 	FORCEINLINE EAIState GetAIState() const { return PlayerState; }
+	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
 	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
 	FORCEINLINE bool IsAPatrol() const { return bIsPatrol; };
 
 
+	// Reaction to the Environment and player functions
+	void PickUpWeapon();
+	void Shoot();
+	void Chase();
+
+
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// override of the shothit interface's GetShot() declaration
-	virtual void GetShot(const FHitResult& hitPoint);
 
+	// Function used by the bullets on hit overlap event.
+	void ReactToBulletHit(FHitResult Hit);
+
+	// override of the shothit interface's GetShot() declaration // for ray cast shooting
+	virtual void GetShot(const FHitResult& hitPoint) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -59,5 +72,12 @@ private:
 
 	EAIState PlayerState = EAIState::EAIS_Uneqipped;
 
+	UPROPERTY(VisibleInstanceOnly)
+	TObjectPtr<AItem> overlappingItem;
 
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<AWeapon> equippedWeapon;
+
+	UPROPERTY(VisibleAnywhere)
+	TArray<AWeapon*> availibleWeapons;
 };

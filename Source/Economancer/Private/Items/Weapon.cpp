@@ -2,6 +2,8 @@
 
 
 #include "Items/Weapon.h"
+#include "Components/SceneComponent.h" 
+#include "Items/ItemParts/Bullet.h"
 #include "Interfaces/ShotInterFace.h"
 #include "Characters/PlayerCharacter.h"
 #include "Components/SphereComponent.h"
@@ -14,8 +16,11 @@
 
 AWeapon::AWeapon()
 {
-	Muzzle = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
-	Muzzle->SetupAttachment(GetRootComponent()); 
+	PrimaryActorTick.bCanEverTick = true;
+
+
+	MuzzleComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Muzzle"));
+	MuzzleComponent->SetupAttachment(GetRootComponent()); 
 
 	ShellEjector = CreateDefaultSubobject<USceneComponent>(TEXT("ShellEjector"));
 	ShellEjector->SetupAttachment(GetRootComponent());
@@ -48,6 +53,8 @@ void AWeapon::onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 }
 
 
+
+
 ////////////////////////////////////////////////// Custom Functions start here.
 
 
@@ -60,50 +67,139 @@ void AWeapon::Equip(TObjectPtr<USceneComponent> inParent, FName(inSocketName))
 	}
 }
 
-void AWeapon::Shoot(AController* playerController)
+void AWeapon::FireModeSelect()
 {
-	FVector cameraLocation;
-	FRotator cameraRotation;
-	if (MuzzleVfxComponent) // Muzzle flash happens here.
+	switch (FireMode)
 	{
-		MuzzleVfxComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(MuzzleVfxSystem, Muzzle, NAME_None, Muzzle->GetComponentLocation(), Muzzle->GetComponentRotation(), EAttachLocation::KeepWorldPosition, true, true, ENCPoolMethod::None, true);
+	case EWeaponFireMode::EWFM_Burst:
+		shotLimit = 2.f;
+		FireMode = EWeaponFireMode::EWFM_Auto;
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Burst"));
+		break;
+	case EWeaponFireMode::EWFM_Auto:
+		shotLimit = 9.f;
+		FireMode = EWeaponFireMode::EWFM_Single;
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Auto"));
+		break;
+	case EWeaponFireMode::EWFM_Single:
+		shotLimit = 0.f;
+		FireMode = EWeaponFireMode::EWFM_Burst;
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Semi-Auto"));
+		break;
+	default:
+		shotLimit = 0.f;
+		FireMode = EWeaponFireMode::EWFM_Single;
+		break;
+	}
+}
+
+
+void AWeapon::Shoot(AController* playerController)
+
+{
+	
+
+	if (bCanFire)
+	{
+		bCanFire = false;
+		FVector cameraLocation;
+		FRotator cameraRotation;
+
+		playerController->GetPlayerViewPoint(cameraLocation, cameraRotation);
+
+		FVector MuzzleLocation = MuzzleComponent->GetComponentLocation();
+		FVector DirectionToCenterOfScreen = cameraRotation.Vector();
+
+		FHitResult HitResult;
+		FVector EndPoint = MuzzleLocation + DirectionToCenterOfScreen * range;
+
+		// Perform a line trace to determine the actual end point where the bullet will hit
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, EndPoint, ECC_Visibility);
+		if (bHit)
+		{
+			EndPoint = HitResult.ImpactPoint;
+		}
+		if (shotsTaken <= shotLimit)
+		{
+			MuzzleFlash();
+			ShellEject();
+			ShootBullet(EndPoint, playerController);
+		}
+		const float FireRate = 0.05f;
+		GetWorld()->GetTimerManager().SetTimer(ShootTimerHandle, this, &AWeapon::ResetChamber, FireRate, false);
+		/*
+		FVector shotTraceEnd = cameraLocation + (cameraRotation.Vector() * range);
+		bIsHit = GetWorld()->LineTraceSingleByChannel(shotHit, Muzzle->GetComponentLocation(), shotTraceEnd, ECC_Visibility, traceParams);
+		if (bIsHit)
+		{
+			DrawDebugLine(GetWorld(), Muzzle->GetComponentLocation(), shotHit.ImpactPoint, FColor::Cyan, false, 2.0f);
+			CreateFields(shotHit);
+
+			if (shotHit.GetActor())
+			{
+				IShotInterFace* shotInterface = Cast<IShotInterFace>(shotHit.GetActor()); // casting to the Shot interface
+				if (shotInterface)
+				{
+					shotInterface->GetShot(shotHit);
+				}
+
+			}
+
+			if (shotHit.GetComponent()->GetCollisionObjectType() == ECC_Destructible)
+			{
+				CreateFields(shotHit);
+				FVector impulseVector = (shotHit.ImpactPoint - Muzzle->GetComponentLocation()).GetSafeNormal();
+				shotHit.GetComponent()->AddImpulseAtLocation(impulseVector * 1000, shotHit.ImpactPoint);// adding impulse to whatever is hit
+				DrawDebugBox(GetWorld(), shotHit.ImpactPoint, FVector(5, 5, 5), FColor::Red, false, 2.0f);
+
+			}
+		}*/
 	}
 
+}
+
+void AWeapon::MuzzleFlash()
+{
+	if (MuzzleVfxComponent) // Muzzle flash happens here.
+	{
+		MuzzleVfxComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(MuzzleVfxSystem, MuzzleComponent, NAME_None, MuzzleComponent->GetComponentLocation(), MuzzleComponent->GetComponentRotation(), EAttachLocation::KeepWorldPosition, true, true, ENCPoolMethod::None, true);
+	}
+}
+
+void AWeapon::ShellEject()
+{
 	if (ShellEjectionComponent)// Shell Ejection happens here.
 	{
 		ShellEjectionComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(ShellEjectionSystem, ShellEjector, NAME_None, ShellEjector->GetComponentLocation(), ShellEjector->GetComponentRotation(), EAttachLocation::KeepWorldPosition, true, true, ENCPoolMethod::None, true);
 	}
+}
+
+AActor* AWeapon::ShootBullet(FVector Endpoint, AController* playerController)
+{
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Instigator = playerController->GetPawn();
+	bShotFired = true;
+	AActor* SpawnActor = GetWorld()->SpawnActor<ABullet>(BulletType, MuzzleComponent->GetComponentLocation(), (Endpoint - MuzzleComponent->GetComponentLocation()).Rotation(), SpawnParams);
+	++shotsTaken;
+	 // the weapon animinstance needs to see this.
+	return SpawnActor;
 	
-	
-	playerController->GetPlayerViewPoint(cameraLocation, cameraRotation);
+}
 
-	FVector shotTraceEnd = cameraLocation + (cameraRotation.Vector() * range);
-	bIsHit = GetWorld()->LineTraceSingleByChannel(shotHit, Muzzle->GetComponentLocation(), shotTraceEnd, ECC_Visibility, traceParams);
-	if (bIsHit)
-	{
-		DrawDebugLine(GetWorld(), Muzzle->GetComponentLocation(), shotHit.ImpactPoint, FColor::Cyan, false, 2.0f);
-		CreateFields(shotHit);
+void AWeapon::ResetChamber()
+{
+	bShotFired = false;
+	bCanFire = true;
+}
 
-		if (shotHit.GetActor())
-		{
-			IShotInterFace* shotInterface = Cast<IShotInterFace>(shotHit.GetActor()); // casting to the Shot interface
-			if (shotInterface)
-			{
-				shotInterface->GetShot(shotHit);
-			}
-			
-		}
 
-		if (shotHit.GetComponent()->GetCollisionObjectType() == ECC_Destructible)
-		{
-			CreateFields(shotHit);
-			FVector impulseVector = (shotHit.ImpactPoint - Muzzle->GetComponentLocation()).GetSafeNormal();
-			shotHit.GetComponent()->AddImpulseAtLocation(impulseVector * 1000, shotHit.ImpactPoint);// adding impulse to whatever is hit
-			DrawDebugBox(GetWorld(), shotHit.ImpactPoint, FVector(5, 5, 5), FColor::Red, false, 2.0f);
-
-		}
-		
-	}
+void AWeapon::TriggerRelease()
+{
+	shotsTaken = 0.f;
 }
 
 void AWeapon::Aim(AController* playerController)
@@ -115,7 +211,7 @@ void AWeapon::Aim(AController* playerController)
 	playerController->GetPlayerViewPoint(cameraLocation, cameraRotation);
 
 	FVector shotTraceEnd = cameraLocation + (cameraRotation.Vector() * range);
-	if (GetWorld()->LineTraceSingleByChannel(aimHit, Muzzle->GetComponentLocation(), shotTraceEnd, ECC_Visibility, traceParams))
+	if (GetWorld()->LineTraceSingleByChannel(aimHit, MuzzleComponent->GetComponentLocation(), shotTraceEnd, ECC_Visibility, traceParams))
 	{
 		mesh->SetWorldLocation(aimHit.Location);
 
@@ -138,6 +234,11 @@ void AWeapon::AttatchToPlayerSocket(TObjectPtr<USceneComponent> inParent, const 
 {
 	FAttachmentTransformRules transformRules(EAttachmentRule::SnapToTarget, true);
 	RootComponent->AttachToComponent(inParent, transformRules, inSocketName); // Always atatch the root component while equiping, if i do it to the mesh, it decoupls from the weapon and leaves it behind when the player moves.
+}
+
+bool AWeapon::IsFiring() const
+{
+	return bShotFired;
 }
 
 void AWeapon::CreateFields(const FHitResult& hit)

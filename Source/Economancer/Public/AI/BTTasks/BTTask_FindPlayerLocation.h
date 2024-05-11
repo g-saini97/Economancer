@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/Tasks/BTTask_BlackboardBase.h"
+#include "Interfaces/BTInterfaces/Aware.h"
 #include "BTTask_FindPlayerLocation.generated.h"
 
 
