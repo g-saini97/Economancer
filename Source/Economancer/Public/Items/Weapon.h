@@ -46,7 +46,7 @@ protected:
 	EWeaponType WeaponType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeaponAttributes, meta = (AllowPrivateAccess = "true")) // FireMode Enum
-	EWeaponFireMode FireMode;
+	EWeaponFireMode FireMode = EWeaponFireMode::EWFM_Single;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = WeaponAttributes, meta = (AllowPrivateAccess = "true"))
 	float fireRate;

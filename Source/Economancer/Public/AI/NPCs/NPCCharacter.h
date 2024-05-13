@@ -5,15 +5,17 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BehaviorTree.h" 
+#include "Interfaces/BTInterfaces/CombatInterface.h" 
 #include "Interfaces/ShotInterFace.h"
 #include "AI/AICharacterTypes.h"
 #include "NPCCharacter.generated.h"
 
 class AItem;
 class AWeapon;
+class UAnimMontage;
 
 UCLASS()
-class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace
+class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace, public ICombatInterface
 {
 	GENERATED_BODY()
 
@@ -23,10 +25,15 @@ public:
 	// getter for the AI controller 
 	FORCEINLINE TObjectPtr<UBehaviorTree> GetBehaviorTree() const { return BTree; };
 	FORCEINLINE EAIState GetAIState() const { return PlayerState; }
+	FORCEINLINE UAnimMontage* GetMontage() const { return MeleeMontage_1; };
+
+
+
 	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
 	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
 	FORCEINLINE bool IsAPatrol() const { return bIsPatrol; };
+
 
 
 	// Reaction to the Environment and player functions
@@ -44,6 +51,9 @@ public:
 
 	// override of the shothit interface's GetShot() declaration // for ray cast shooting
 	virtual void GetShot(const FHitResult& hitPoint) override;
+
+	// override of the CombatInterface interface's GetShot() declaration // for ray cast shooting
+	int MeleeAttack_Implementation() override; // Do not bulid/compile without defining such Implementable functions
 
 protected:
 	virtual void BeginPlay() override;
@@ -80,4 +90,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	TArray<AWeapon*> availibleWeapons;
+
+	UPROPERTY(EditAnywhere, Category = "AI", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* MeleeMontage_1;
 };

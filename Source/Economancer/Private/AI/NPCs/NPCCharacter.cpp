@@ -2,10 +2,12 @@
 
 
 #include "AI/NPCs/NPCCharacter.h"
+#include "AI/NPC_AIController.h"
 #include "Items/Item.h"
 #include "Items/Weapon.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimMontage.h"
 #include "Components/CapsuleComponent.h"
 #include "Economancer/DebugMacros.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -33,7 +35,14 @@ ANPCCharacter::ANPCCharacter()
 void ANPCCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	UAnimInstance* AnimInstance = this->GetMesh()->GetAnimInstance();
+	if (AnimInstance && MeleeMontage_1)
+	{
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("Dummy Attacks"));
+		AnimInstance->Montage_Play(MeleeMontage_1);
+		AnimInstance->Montage_JumpToSection(FName("Punch_1"), MeleeMontage_1);
+	}
 }
 
 
@@ -45,6 +54,8 @@ void ANPCCharacter::Tick(float DeltaTime)
 	{
 		PickUpWeapon();
 	}
+
+	
 }
 
 void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -52,9 +63,6 @@ void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 }
-
-
-
 
 void ANPCCharacter::PickUpWeapon() // right now the AI only picks up on overlap, it does not seek out these weapons
 {
@@ -74,23 +82,33 @@ void ANPCCharacter::Shoot()
 	return;
 }
 
-
-
-void ANPCCharacter::ReactToBulletHit( FHitResult Hit)
+void ANPCCharacter::ReactToBulletHit(FHitResult Hit)
 {
-
 	Health -= 50;
+
 	if (Health <= 0)
 	{
-		//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		GetCapsuleComponent()->Deactivate();
+		// Disable capsule collision and physics
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetSimulatePhysics(false);
+
+		// Enable physics for the mesh and set animation mode to physics
 		GetMesh()->SetSimulatePhysics(true);
 		GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 		GetMesh()->SetAllBodiesSimulatePhysics(true);
-		//GetMesh()->WakeAllRigidBodies();
+
+		// Apply impulse to simulate hit reaction
 		FVector ImpulseVector = (Hit.ImpactPoint - Hit.TraceStart).GetSafeNormal();
 		GetMesh()->AddImpulseAtLocation(ImpulseVector * 8000.f, Hit.ImpactPoint, Hit.BoneName);
-		GetCapsuleComponent()->Deactivate();
+	
+
+		// Deactivate AI controller
+		ANPC_AIController* AIController = Cast<ANPC_AIController>(GetController());
+		if (AIController)
+		{
+			AIController->StopMovement();
+			AIController->Destroy();
+		}
 	}
 }
 
@@ -113,12 +131,28 @@ void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a ra
 	}
 
 
+}  /// use if bing hit with a raycasted weapons
+
+
+int ANPCCharacter::MeleeAttack_Implementation()
+{
+
+	
+	
+	if (MeleeMontage_1)
+	{
+		
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance && MeleeMontage_1)
+		{
+			if (GEngine)
+				GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("Dummy Attacks"));
+			AnimInstance->Montage_Play(MeleeMontage_1);
+			AnimInstance->Montage_JumpToSection(FName("Punch_1"), MeleeMontage_1);
+		}
+	}
+
+	return 0;
 }
-/// use if bing hit with a raycasted weapon
-
-
-
-
-
 
 

@@ -74,8 +74,7 @@ void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		{
 			// React to bullet hit for NPCs
 			NPCCharacter->ReactToBulletHit(SweepResult);
-			if (GEngine)
-				GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("NPC detected"));
+			
 
 			// Destroy the bullet after hitting an NPC
 			Destroy();

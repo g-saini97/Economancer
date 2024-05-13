@@ -88,7 +88,10 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		enhancedComponent->BindAction(sprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::SprintEnd);
 		enhancedComponent->BindAction(pickUpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Pickup);
 		enhancedComponent->BindAction(aimAction, ETriggerEvent::Started, this, &APlayerCharacter::AimStart);
+		enhancedComponent->BindAction(aimAction, ETriggerEvent::Started, this, &APlayerCharacter::Zoom);
+
 		enhancedComponent->BindAction(aimAction, ETriggerEvent::Completed, this, &APlayerCharacter::AimEnd);
+		enhancedComponent->BindAction(aimAction, ETriggerEvent::Completed, this, &APlayerCharacter::UnZoom);
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::AttackStart);
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Completed, this, &APlayerCharacter::AttackReleased);
 		
@@ -159,6 +162,12 @@ void APlayerCharacter::Pickup(const FInputActionValue& value)
 		equippedWeapon = overlappingWeapon;
 		availibleWeapons.Add(equippedWeapon);
 		PlayerState = EPlayerState::EPS_EquippedOneHanded;
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow, TEXT("SwitchPressed"));
+		if (PlayerState != EPlayerState::EPS_Uneqipped)
+		{
+			equippedWeapon->FireModeSelect();
+		}
 	}
 }
 
@@ -168,10 +177,15 @@ void APlayerCharacter::AimStart(const FInputActionValue& value)
 	{
 		isAiming = true;
 		doOnceAim = false;
-		
-		this->springArm->TargetArmLength = springArmZoomed;
 	}
 }
+
+void APlayerCharacter::Zoom(const FInputActionValue& value)
+{
+	this->springArm->TargetArmLength = springArmZoomed;
+}
+
+
 
 void APlayerCharacter::AimEnd(const FInputActionValue& value)
 {
@@ -180,9 +194,12 @@ void APlayerCharacter::AimEnd(const FInputActionValue& value)
 	if (PlayerState != EPlayerState::EPS_Uneqipped)
 	{
 		equippedWeapon->AimEnd();
-		float interpZoomLength = UKismetMathLibrary::FInterpTo(springArmZoomed, springArmDefault, GetWorld()->DeltaTimeSeconds,0.5f);
-		this->springArm->TargetArmLength = springArmDefault;
 	}
+}
+void APlayerCharacter::UnZoom(const FInputActionValue& value)
+{
+	float interpZoomLength = UKismetMathLibrary::FInterpTo(springArmZoomed, springArmDefault, GetWorld()->DeltaTimeSeconds, 0.5f);
+	this->springArm->TargetArmLength = springArmDefault;
 }
 
 void APlayerCharacter::SwitchFireMode(const FInputActionValue& value)
@@ -198,10 +215,13 @@ void APlayerCharacter::SwitchFireMode(const FInputActionValue& value)
 void APlayerCharacter::AttackStart(const FInputActionValue& value)
 {
 	doOnceShoot = true;
-	if (canShoot())
+	if (canShoot() && isAiming)
+	{
+		equippedWeapon->Shoot(this->GetController());
+	}
+	else if(canShoot())
 	{
 		isAiming = true;
-		equippedWeapon->Shoot(this->GetController());
 	}
 }
 

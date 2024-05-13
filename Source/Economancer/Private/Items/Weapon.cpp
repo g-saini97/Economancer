@@ -90,8 +90,8 @@ void AWeapon::FireModeSelect()
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Semi-Auto"));
 		break;
 	default:
-		shotLimit = 0.f;
-		FireMode = EWeaponFireMode::EWFM_Single;
+		//shotLimit = 0.f;
+		//FireMode = EWeaponFireMode::EWFM_Single;
 		break;
 	}
 }
@@ -114,7 +114,7 @@ void AWeapon::Shoot(AController* playerController)
 		FVector DirectionToCenterOfScreen = cameraRotation.Vector();
 
 		FHitResult HitResult;
-		FVector EndPoint = MuzzleLocation + DirectionToCenterOfScreen * range;
+		FVector EndPoint = cameraLocation + DirectionToCenterOfScreen * range;
 
 		// Perform a line trace to determine the actual end point where the bullet will hit
 		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, EndPoint, ECC_Visibility);

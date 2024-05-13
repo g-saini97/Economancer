@@ -31,7 +31,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	const float MaxDistance = 2000.0f;
+	const float MaxDistance = 4000.0f;
 	FVector SpawnLocation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"));

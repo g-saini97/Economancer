@@ -50,6 +50,7 @@ protected:
 	
 	bool doOnceShoot = false;
 	bool doOnceAim = true;
+	bool isZooming;
 	bool isAiming;
 	bool bIsHolstered = false;
 	FRotator cameraRotation; //to be seen by the anim instance
@@ -114,6 +115,8 @@ protected:
 	void AttackReleased(const FInputActionValue& value);
 	void AttackEnd();
 	void AimStart(const FInputActionValue& value);
+	void Zoom(const FInputActionValue& value);
+	void UnZoom(const FInputActionValue& value);
 	void AimEnd (const FInputActionValue& value);
 	void SwitchFireMode(const FInputActionValue& value);
 	void CustomJump(const FInputActionValue& value);
