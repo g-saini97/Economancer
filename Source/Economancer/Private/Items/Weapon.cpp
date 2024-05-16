@@ -213,7 +213,7 @@ void AWeapon::Aim(AController* playerController)
 	FVector shotTraceEnd = cameraLocation + (cameraRotation.Vector() * range);
 	if (GetWorld()->LineTraceSingleByChannel(aimHit, MuzzleComponent->GetComponentLocation(), shotTraceEnd, ECC_Visibility, traceParams))
 	{
-		mesh->SetWorldLocation(aimHit.Location);
+		mesh->SetWorldLocation(aimHit.ImpactPoint);
 
 		mesh->SetVisibility(true);
 	}

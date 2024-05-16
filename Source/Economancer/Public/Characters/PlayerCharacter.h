@@ -56,6 +56,10 @@ protected:
 	FRotator cameraRotation; //to be seen by the anim instance
 	float springArmDefault = 300.f;
 	float springArmZoomed = 150.f;
+	FVector springArmZoomSocketOffset = FVector(0.f ,20.f,15.f);
+	FVector springArmDefaultSocketOffset = FVector(0.f,0.f,0.F);
+	FRotator cameraZoomedRotation = FRotator(0.f, 0.f, 0.f);
+	FRotator cameraDefaultRotation = FRotator(0.f, 0.f, 0.f);
 
 
 
@@ -115,8 +119,7 @@ protected:
 	void AttackReleased(const FInputActionValue& value);
 	void AttackEnd();
 	void AimStart(const FInputActionValue& value);
-	void Zoom(const FInputActionValue& value);
-	void UnZoom(const FInputActionValue& value);
+	void ZoomFollowCamera(float DeltaTime);
 	void AimEnd (const FInputActionValue& value);
 	void SwitchFireMode(const FInputActionValue& value);
 	void CustomJump(const FInputActionValue& value);

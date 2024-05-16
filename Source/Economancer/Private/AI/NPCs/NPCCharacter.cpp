@@ -29,20 +29,15 @@ ANPCCharacter::ANPCCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
 }
+
+
 
 
 void ANPCCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	UAnimInstance* AnimInstance = this->GetMesh()->GetAnimInstance();
-	if (AnimInstance && MeleeMontage_1)
-	{
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("Dummy Attacks"));
-		AnimInstance->Montage_Play(MeleeMontage_1);
-		AnimInstance->Montage_JumpToSection(FName("Punch_1"), MeleeMontage_1);
-	}
 }
 
 
@@ -55,7 +50,6 @@ void ANPCCharacter::Tick(float DeltaTime)
 		PickUpWeapon();
 	}
 
-	
 }
 
 void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -63,6 +57,7 @@ void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 }
+
 
 void ANPCCharacter::PickUpWeapon() // right now the AI only picks up on overlap, it does not seek out these weapons
 {
@@ -84,6 +79,27 @@ void ANPCCharacter::Shoot()
 
 void ANPCCharacter::ReactToBulletHit(FHitResult Hit)
 {
+	bool bShouldDodge = FMath::RandBool();
+
+	if (Dodger && NumberOfDodges >= 0 &&  bShouldDodge )
+	{
+		NumberOfDodges--;
+		if (GEngine)
+		{
+			FString DebugMessage = FString::Printf(TEXT("Dodges left %f"), NumberOfDodges);
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, DebugMessage);
+		}
+		bIsAbleToDodge = true;
+	}
+	else
+	{
+		RecieveDamageFromBullet(Hit);
+	}
+}
+
+void ANPCCharacter::RecieveDamageFromBullet(FHitResult Hit)
+{
+	bIsAbleToDodge = false;
 	Health -= 50;
 
 	if (Health <= 0)
@@ -99,8 +115,8 @@ void ANPCCharacter::ReactToBulletHit(FHitResult Hit)
 
 		// Apply impulse to simulate hit reaction
 		FVector ImpulseVector = (Hit.ImpactPoint - Hit.TraceStart).GetSafeNormal();
-		GetMesh()->AddImpulseAtLocation(ImpulseVector * 8000.f, Hit.ImpactPoint, Hit.BoneName);
-	
+		GetMesh()->AddImpulseAtLocation(ImpulseVector * 4000.f, Hit.ImpactPoint, Hit.BoneName);
+
 
 		// Deactivate AI controller
 		ANPC_AIController* AIController = Cast<ANPC_AIController>(GetController());
@@ -111,6 +127,8 @@ void ANPCCharacter::ReactToBulletHit(FHitResult Hit)
 		}
 	}
 }
+
+
 
 // INterface implementations 
 void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a raycasted weapon
@@ -136,19 +154,16 @@ void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a ra
 
 int ANPCCharacter::MeleeAttack_Implementation()
 {
-
-	
-	
-	if (MeleeMontage_1)
+	if (MeleeMontage )
 	{
 		
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-		if (AnimInstance && MeleeMontage_1)
+		if (AnimInstance && MeleeMontage)
 		{
-			if (GEngine)
-				GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("Dummy Attacks"));
-			AnimInstance->Montage_Play(MeleeMontage_1);
-			AnimInstance->Montage_JumpToSection(FName("Punch_1"), MeleeMontage_1);
+			
+			AnimInstance->Montage_Play(MeleeMontage);
+			AnimInstance->Montage_JumpToSection(FName("Punch_1"), MeleeMontage);
+			
 		}
 	}
 
@@ -156,3 +171,56 @@ int ANPCCharacter::MeleeAttack_Implementation()
 }
 
 
+int ANPCCharacter::DodgeBullet_Implementation()
+{
+	if (ActionState == EAIActionState::EAIAS_NotBusy)
+	{
+		PlayDodgeMontage();
+		ActionState = EAIActionState::EAIAS_Dodging; // gets changed in the Anim BP again.
+	}
+	
+	return 0;
+}
+
+void ANPCCharacter::PlayDodgeMontage()
+{
+	if (DodgeMontage && NumberOfDodges >= 0)
+	{
+		bIsAbleToDodge = false;
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance)
+		{
+			if (GEngine)
+				GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("DodgeCalled"));
+
+			int32 sectionSelector = FMath::RandRange(0, 1); /// increase the range when adding more sections to the montage
+			FName sectionName = FName();
+			switch (sectionSelector)
+			{
+			case 0:
+				sectionName = FName("Dodge_1");
+				break;
+			case 1:
+				sectionName = FName("Dodge_2");
+				break;
+			default:
+				break;
+			}
+			AnimInstance->Montage_Play(DodgeMontage);
+			AnimInstance->Montage_JumpToSection(sectionName, DodgeMontage);
+		}
+
+	}
+}
+
+void ANPCCharacter::DodgeEnd() // just changes the state of the NPC so that the it dos not keep dodging.
+{
+	ActionState = EAIActionState::EAIAS_NotBusy;
+}
+
+
+bool ANPCCharacter::CanDodge() const
+{
+	
+	return bIsAbleToDodge;
+}

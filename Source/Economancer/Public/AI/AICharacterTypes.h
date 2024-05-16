@@ -13,3 +13,11 @@ enum class EAIState : uint8   /// enum class makes a scoped enum, so in order to
 	EAIS_EquippedTwoHanded UMETA(DisplayName = "EquippedTwoHanded"),
 	EAIS_EquipedAkimbo UMETA(DisplayName = "EquipedAkimbo")
 };
+
+UENUM(BlueprintType)
+
+enum class EAIActionState : uint8
+{
+	EAIAS_NotBusy UMETA(DisplayName = "Not Doing AnyThing"),
+	EAIAS_Dodging UMETA(DisplayName = "Dodging")
+};

@@ -70,7 +70,8 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 	controllerOrientationLockChecker(); // stops player form roating while not grounded
 	wallJumpChecker();
-	
+	ZoomFollowCamera(DeltaTime);
+
 
 }
 
@@ -88,10 +89,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 		enhancedComponent->BindAction(sprintAction, ETriggerEvent::Completed, this, &APlayerCharacter::SprintEnd);
 		enhancedComponent->BindAction(pickUpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Pickup);
 		enhancedComponent->BindAction(aimAction, ETriggerEvent::Started, this, &APlayerCharacter::AimStart);
-		enhancedComponent->BindAction(aimAction, ETriggerEvent::Started, this, &APlayerCharacter::Zoom);
 
 		enhancedComponent->BindAction(aimAction, ETriggerEvent::Completed, this, &APlayerCharacter::AimEnd);
-		enhancedComponent->BindAction(aimAction, ETriggerEvent::Completed, this, &APlayerCharacter::UnZoom);
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Triggered, this, &APlayerCharacter::AttackStart);
 		enhancedComponent->BindAction(shootAction, ETriggerEvent::Completed, this, &APlayerCharacter::AttackReleased);
 		
@@ -177,13 +176,34 @@ void APlayerCharacter::AimStart(const FInputActionValue& value)
 	{
 		isAiming = true;
 		doOnceAim = false;
+		isZooming = true;
 	}
 }
 
-void APlayerCharacter::Zoom(const FInputActionValue& value)
+void APlayerCharacter::ZoomFollowCamera(float DeltaTime)
 {
-	this->springArm->TargetArmLength = springArmZoomed;
+	// Define target values for zoomed in and default states
+	float TargetLength = isZooming ? springArmZoomed : springArmDefault;
+	FVector TargetSocketOffset = isZooming ? springArmZoomSocketOffset: springArmDefaultSocketOffset ; // Example offset
+	FRotator TargetRotation = isZooming ? cameraZoomedRotation : FRotator::ZeroRotator; // Example rotation
+
+	// Interpolate SpringArm length
+	float CurrentLength = this->springArm->TargetArmLength;
+	float NewLength = UKismetMathLibrary::FInterpTo(CurrentLength, TargetLength, DeltaTime, 10.f);
+	this->springArm->TargetArmLength = NewLength;
+
+	// Interpolate SpringArm SocketOffset
+	FVector CurrentSocketOffset = this->springArm->SocketOffset;
+	FVector NewSocketOffset = FMath::VInterpTo(CurrentSocketOffset, TargetSocketOffset, DeltaTime, 10.f);
+	this->springArm->SocketOffset = NewSocketOffset;
+
+	// Interpolate Camera rotation
+	FRotator CurrentRotation = this->camera->GetRelativeRotation();
+	FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 10.f);
+	this->camera->SetRelativeRotation(NewRotation);
 }
+
+
 
 
 
@@ -191,16 +211,13 @@ void APlayerCharacter::AimEnd(const FInputActionValue& value)
 {
 	isAiming = false;
 	doOnceAim = true;
+	isZooming = false;
 	if (PlayerState != EPlayerState::EPS_Uneqipped)
 	{
 		equippedWeapon->AimEnd();
 	}
 }
-void APlayerCharacter::UnZoom(const FInputActionValue& value)
-{
-	float interpZoomLength = UKismetMathLibrary::FInterpTo(springArmZoomed, springArmDefault, GetWorld()->DeltaTimeSeconds, 0.5f);
-	this->springArm->TargetArmLength = springArmDefault;
-}
+
 
 void APlayerCharacter::SwitchFireMode(const FInputActionValue& value)
 {

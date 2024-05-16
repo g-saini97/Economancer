@@ -23,6 +23,12 @@ ABullet::ABullet()
 
 	// Set up collision response to ignore collisions with objects of the same collision profile
 	BulletCollision->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore); // Assuming ECC_GameTraceChannel1 is the collision channel of the bullet itself
+	BulletCollision->SetCollisionObjectType(ECollisionChannel::ECC_GameTraceChannel2);
+	BulletCollision->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	BulletCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	BulletCollision->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Overlap);
+	BulletCollision->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Overlap);
+	BulletCollision->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
 	SetRootComponent(BulletCollision);
 
 	BulletMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Bullet Mesh"));
@@ -74,6 +80,45 @@ void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		{
 			// React to bullet hit for NPCs
 			NPCCharacter->ReactToBulletHit(SweepResult);
+
+			// Destroy the bullet after hitting an NPC
+			Destroy();
+		}
+		else if (TObjectPtr<APlayerCharacter> PlayerCharacter = Cast<APlayerCharacter>(OtherActor))
+		{
+			// React to bullet hit for players (if needed)
+			//PlayerCharacter->ReactToBulletHit(SweepResult);
+
+			// Destroy the bullet after hitting a player
+			Destroy();
+		}
+		else
+		{
+			// Destroy the bullet if it hits anything else (like a wall)
+			Destroy();
+		}
+	}
+	else
+	{
+		// If the other actor is not the bullet mesh or collision, destroy the bullet
+		if (OtherComp && OtherComp != BulletMesh && OtherComp != BulletCollision)
+		{
+			Destroy();
+		}
+	}
+}
+
+/*
+void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Check if the other actor exists
+	if (OtherActor)
+	{
+		// If the other actor is an NPC character
+		if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor))
+		{
+			// React to bullet hit for NPCs
+			NPCCharacter->ReactToBulletHit(SweepResult);
 			
 
 			// Destroy the bullet after hitting an NPC
@@ -89,6 +134,7 @@ void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		}
 	}
 }
+*/
 
 
 float ABullet::GetDistanceTraveled()

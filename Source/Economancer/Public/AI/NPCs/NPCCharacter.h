@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "BehaviorTree/BehaviorTree.h" 
 #include "Interfaces/BTInterfaces/CombatInterface.h" 
+#include "Interfaces/BTInterfaces/DodgeInterface.h"
 #include "Interfaces/ShotInterFace.h"
 #include "AI/AICharacterTypes.h"
 #include "NPCCharacter.generated.h"
@@ -15,7 +16,7 @@ class AWeapon;
 class UAnimMontage;
 
 UCLASS()
-class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace, public ICombatInterface
+class ECONOMANCER_API ANPCCharacter : public ACharacter, public IShotInterFace, public ICombatInterface, public IDodgeInterface
 {
 	GENERATED_BODY()
 
@@ -25,10 +26,8 @@ public:
 	// getter for the AI controller 
 	FORCEINLINE TObjectPtr<UBehaviorTree> GetBehaviorTree() const { return BTree; };
 	FORCEINLINE EAIState GetAIState() const { return PlayerState; }
-	FORCEINLINE UAnimMontage* GetMontage() const { return MeleeMontage_1; };
-
-
-
+	FORCEINLINE UAnimMontage* GetMontage() const { return MeleeMontage; }; // make this getAttackMontage later, Note to Self
+	FORCEINLINE UAnimMontage* GetDodgeMontage() const { return DodgeMontage; };
 	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
 	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
@@ -37,6 +36,7 @@ public:
 
 
 	// Reaction to the Environment and player functions
+	bool CanDodge()const; // if this were inline, it breaks the dodge systemm
 	void PickUpWeapon();
 	void Shoot();
 	void Chase();
@@ -48,19 +48,34 @@ public:
 
 	// Function used by the bullets on hit overlap event.
 	void ReactToBulletHit(FHitResult Hit);
+	void RecieveDamageFromBullet(FHitResult Hit);
 
 	// override of the shothit interface's GetShot() declaration // for ray cast shooting
 	virtual void GetShot(const FHitResult& hitPoint) override;
 
-	// override of the CombatInterface interface's GetShot() declaration // for ray cast shooting
+	// override of the CombatInterface interface's MeleeAttack() declaration // for meleeattacks dirven by the Behavior tree
 	int MeleeAttack_Implementation() override; // Do not bulid/compile without defining such Implementable functions
+
+	// override for the DodgeInterface's function
+	int DodgeBullet_Implementation() override;
+	void PlayDodgeMontage();
+	
+	UFUNCTION(BlueprintCallable) // Need to call this in the Anim BP
+	void DodgeEnd();
 
 protected:
 	virtual void BeginPlay() override;
 	// Stats
-	float Health = 95;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (AllowPrivateAccess = "true"));
+	float Health = 115.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (AllowPrivateAccess = "true"));
+	float NumberOfDodges = 4;
+	bool bIsAbleToDodge = false;
 
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (AllowPrivateAccess = "true"));
+	bool Dodger = false;
+	
 	//Conditions
 	bool isAiming;
 
@@ -82,6 +97,9 @@ private:
 
 	EAIState PlayerState = EAIState::EAIS_Uneqipped;
 
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	EAIActionState ActionState = EAIActionState::EAIAS_NotBusy;
+
 	UPROPERTY(VisibleInstanceOnly)
 	TObjectPtr<AItem> overlappingItem;
 
@@ -92,5 +110,8 @@ private:
 	TArray<AWeapon*> availibleWeapons;
 
 	UPROPERTY(EditAnywhere, Category = "AI", meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* MeleeMontage_1;
+	UAnimMontage* MeleeMontage;
+
+	UPROPERTY(EditAnywhere, Category = "AI", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* DodgeMontage;
 };

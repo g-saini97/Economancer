@@ -11,7 +11,8 @@ public class Economancer : ModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", 
 			"CoreUObject",
-			"Engine", "InputCore", 
+			"Engine", 
+			"InputCore", 
 			"EnhancedInput", 
 			"FieldSystemEngine", 
 			"Niagara",

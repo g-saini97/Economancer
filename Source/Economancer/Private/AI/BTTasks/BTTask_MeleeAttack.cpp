@@ -19,7 +19,7 @@ UBTTask_MeleeAttack::UBTTask_MeleeAttack()
 EBTNodeResult::Type UBTTask_MeleeAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	// to not attact when out of range
-	auto const OutOfRange = !OwnerComp.GetBlackboardComponent()->GetValueAsBool(GetSelectedBlackboardKey());
+	auto const OutOfRange = !OwnerComp.GetBlackboardComponent()->GetValueAsBool(GetSelectedBlackboardKey());// proximity check by looking the the blackboardkey
 	if (OutOfRange)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
