@@ -286,7 +286,7 @@ void ANPC_AIController::StopAiming()
 void ANPC_AIController::StartCoverTimer()
 {
     bCoverTimerExpired = false;
-    GetWorld()->GetTimerManager().SetTimer(CoverTimerHandle, [this](){bCoverTimerExpired = true;}, 60.0f, false); /// tweak this timer if the NPCs are not staying in cover long enough
+    GetWorld()->GetTimerManager().SetTimer(CoverTimerHandle, [this](){bCoverTimerExpired = true;}, 45.0f, false); /// tweak this timer if the NPCs are not staying in cover long enough
 }
 
 
