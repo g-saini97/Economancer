@@ -47,8 +47,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Movement");
 	bool isFalling;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement");
-	bool isAiming;
+	UPROPERTY(BlueprintReadOnly, Category = "Combat");
+	bool isAiming = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement | Character State")
 	EAIState AIState;

@@ -18,8 +18,10 @@ public class Economancer : ModuleRules
 			"Niagara",
 			"AIModule",
 			"GameplayTasks",
-			"NavigationSystem"
-		});
+			"NavigationSystem",
+            "GameplayStateTreeModule",
+            "StateTreeModule"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

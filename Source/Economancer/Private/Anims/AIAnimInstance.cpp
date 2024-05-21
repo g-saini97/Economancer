@@ -26,6 +26,14 @@ void UAIAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	{
 		xySpeed = AIMovement->Velocity.Size2D();
 	}
+
+	// reads the aim status from the NPC character everyframe, i hope, the StateTree is responsibel for setting it
+	// If NPCs aiming feels or looks Janky, start investigating at the State Tree and the respective State Tree Task.
+	if (AICharacter)
+	{
+		isAiming = AICharacter->GetAimBool();
+	}
+
 }
 
 FRotator UAIAnimInstance::calculateYawPitch()

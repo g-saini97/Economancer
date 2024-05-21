@@ -29,17 +29,18 @@ public:
 	FORCEINLINE UAnimMontage* GetMontage() const { return MeleeMontage; }; // make this getAttackMontage later, Note to Self
 	FORCEINLINE UAnimMontage* GetDodgeMontage() const { return DodgeMontage; };
 	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
-	FORCEINLINE bool GetAimBool() const { return isAiming; };
+	FORCEINLINE bool GetAimBool() const { return bIsAiming; };
 	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
 	FORCEINLINE bool IsAPatrol() const { return bIsPatrol; };
 
+	//setters
+	FORCEINLINE void SetAimBoolTrue() { bIsAiming = true; }
+	FORCEINLINE void SetAimBoolFalse() { bIsAiming = false; }
 
 
 	// Reaction to the Environment and player functions
 	bool CanDodge()const; // if this were inline, it breaks the dodge systemm
 	void PickUpWeapon();
-	void Shoot();
-	void Chase();
 
 
 	virtual void Tick(float DeltaTime) override;
@@ -58,6 +59,7 @@ public:
 
 	// override for the DodgeInterface's function
 	int DodgeBullet_Implementation() override;
+	
 	void PlayDodgeMontage();
 	
 	UFUNCTION(BlueprintCallable) // Need to call this in the Anim BP
@@ -77,7 +79,8 @@ protected:
 	bool Dodger = false;
 	
 	//Conditions
-	bool isAiming;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Combat", meta = (AllowPrivateAccess = "true"));
+	bool bIsAiming = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "AI Parameters", meta = (AllowPrivateAccess = "true"));
 	bool bIsGuard = true;

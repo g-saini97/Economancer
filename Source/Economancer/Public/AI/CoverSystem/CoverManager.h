@@ -18,6 +18,7 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	static ACoverManager* GetInstance();
 
 	UFUNCTION(BlueprintCallable, Category = "Cover")
 	ACoverPoint* FindCoverPoint(AActor* NPC, AActor* Player);
@@ -25,8 +26,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cover")
 	void ReleaseCoverPoint(ACoverPoint* CoverPoint);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover")
-	TArray<ACoverPoint*> CoverPoints;
+	UFUNCTION(BlueprintCallable, Category = "Cover")
+	TArray<ACoverPoint*> FindFlankingCoverPoints(AActor* Player, AActor* NPC, float FlankingAngle, float MaxDistance);
 
 
 protected:
@@ -34,4 +35,11 @@ protected:
 
 	bool IsCoverPointValid(AActor* NPC, AActor* Player, ACoverPoint* CoverPoint);
 
+	static ACoverManager* Instance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover", meta = (AllowPrivateAccess = "true"))	
+	TArray<ACoverPoint*> CoverPoints;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover", meta = (AllowPrivateAccess = "true"))
+	float InvalidationRadius = 800.0f; // a Radius around the player that makes cover points invalid so that the NPCs  actually find cover away from the player and not close to them.
 };

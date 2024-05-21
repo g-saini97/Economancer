@@ -30,6 +30,7 @@ ANPCCharacter::ANPCCharacter()
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
+	bIsAiming = false; /// the NPC_AIcontroller will need to be able to change this. The AI anim instance needs to be able to read this
 }
 
 
@@ -40,8 +41,6 @@ void ANPCCharacter::BeginPlay()
 	Super::BeginPlay();
 }
 
-
-
 void ANPCCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -49,7 +48,6 @@ void ANPCCharacter::Tick(float DeltaTime)
 	{
 		PickUpWeapon();
 	}
-
 }
 
 void ANPCCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -70,11 +68,6 @@ void ANPCCharacter::PickUpWeapon() // right now the AI only picks up on overlap,
 		availibleWeapons.Add(equippedWeapon);
 		PlayerState = EAIState::EAIS_EquippedOneHanded;
 	}
-}
-
-void ANPCCharacter::Shoot()
-{
-	return;
 }
 
 void ANPCCharacter::ReactToBulletHit(FHitResult Hit)

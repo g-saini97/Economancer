@@ -7,9 +7,14 @@
 #include "GameFramework/Actor.h"
 #include "DrawDebugHelpers.h"
 
+
+
+ACoverManager* ACoverManager::Instance = nullptr;
+
 ACoverManager::ACoverManager()
 {
     PrimaryActorTick.bCanEverTick = true;
+    Instance = this;
 }
 
 void ACoverManager::BeginPlay()
@@ -26,12 +31,13 @@ void ACoverManager::BeginPlay()
         if (CoverPoint)
         {
             CoverPoints.Add(CoverPoint);
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, FString::Printf(TEXT("Found Cover Point: %s"), *CoverPoint->GetName()));
-            }
         }
     }
+}
+
+ACoverManager* ACoverManager::GetInstance()
+{
+    return Instance;
 }
 
 void ACoverManager::Tick(float DeltaTime)
@@ -41,7 +47,6 @@ void ACoverManager::Tick(float DeltaTime)
 
 ACoverPoint* ACoverManager::FindCoverPoint(AActor* NPC, AActor* Player)
 {
-    // Sort cover points by distance to the NPC
     CoverPoints.Sort([NPC](const ACoverPoint& A, const ACoverPoint& B)
         {
             float DistA = FVector::Dist(A.GetActorLocation(), NPC->GetActorLocation());
@@ -49,37 +54,67 @@ ACoverPoint* ACoverManager::FindCoverPoint(AActor* NPC, AActor* Player)
             return DistA < DistB;
         });
 
-    // Debug output to verify sorting
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("Sorted Cover Points:"));
-        for (const ACoverPoint* CoverPoint : CoverPoints)
-        {
-            float Distance = FVector::Dist(CoverPoint->GetActorLocation(), NPC->GetActorLocation());
-            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("%s: %f"), *CoverPoint->GetName(), Distance));
-        }
-    }
-
     for (ACoverPoint* CoverPoint : CoverPoints)
     {
         if (!CoverPoint->bIsOccupied && IsCoverPointValid(NPC, Player, CoverPoint))
         {
             CoverPoint->SetOccupied(true);
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Cover Point Selected: %s"), *CoverPoint->GetName()));
-            }
+           //if (GEngine)
+           // {
+           //     GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Cover Point Selected: %s"), *CoverPoint->GetName()));
+           // }
             return CoverPoint;
-        }
-        else
-        {
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Cover Point Skipped: %s, Occupied: %s"), *CoverPoint->GetName(), CoverPoint->bIsOccupied ? TEXT("True") : TEXT("False")));
-            }
         }
     }
     return nullptr;
+}
+
+TArray<ACoverPoint*> ACoverManager::FindFlankingCoverPoints(AActor* Player, AActor* NPC, float FlankingAngle, float MaxDistance)
+{
+    TArray<ACoverPoint*> FlankingCoverPoints;
+    FVector PlayerLocation = Player->GetActorLocation();
+    FVector PlayerForward = Player->GetActorForwardVector();
+
+    for (ACoverPoint* CoverPoint : CoverPoints)
+    {
+        if (!CoverPoint->bIsOccupied && IsCoverPointValid(NPC, Player, CoverPoint))
+        {
+            FVector ToCoverPoint = CoverPoint->GetActorLocation() - PlayerLocation;
+            float Distance = ToCoverPoint.Size();
+            ToCoverPoint.Normalize();
+
+            float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(PlayerForward, ToCoverPoint)));
+            if (Angle <= FlankingAngle && Distance <= MaxDistance)
+            {
+                // Check if the cover point is visible to the player
+                FHitResult HitResult;
+                FCollisionQueryParams CollisionParams;
+                CollisionParams.AddIgnoredActor(CoverPoint);
+                CollisionParams.AddIgnoredActor(NPC);
+
+                bool bPlayerCanSeeCover = GetWorld()->LineTraceSingleByChannel(HitResult, PlayerLocation, CoverPoint->GetActorLocation(), ECC_Visibility, CollisionParams);
+
+                // Visualize the line trace
+                DrawDebugLine(GetWorld(), PlayerLocation, CoverPoint->GetActorLocation(), FColor::Red, false, 1.0f);
+
+                // If the player cannot see the cover point, add it to the list
+                if (!bPlayerCanSeeCover || (HitResult.GetActor() && HitResult.GetActor() != Player))
+                {
+                    FlankingCoverPoints.Add(CoverPoint);
+                }
+            }
+        }
+    }
+
+    // Sort flanking cover points by distance to the NPC
+    FlankingCoverPoints.Sort([NPC](const ACoverPoint& A, const ACoverPoint& B)
+        {
+            float DistA = FVector::Dist(A.GetActorLocation(), NPC->GetActorLocation());
+            float DistB = FVector::Dist(B.GetActorLocation(), NPC->GetActorLocation());
+            return DistA < DistB;
+        });
+
+    return FlankingCoverPoints;
 }
 
 void ACoverManager::ReleaseCoverPoint(ACoverPoint* CoverPoint)
@@ -87,58 +122,66 @@ void ACoverManager::ReleaseCoverPoint(ACoverPoint* CoverPoint)
     if (CoverPoint)
     {
         CoverPoint->SetOccupied(false);
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("Cover Point Released: %s"), *CoverPoint->GetName()));
-        }
+        //if (GEngine)
+        //{
+        //    GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("Cover Point Released: %s"), *CoverPoint->GetName()));
+        //}
     }
 }
+
+
 
 bool ACoverManager::IsCoverPointValid(AActor* NPC, AActor* Player, ACoverPoint* CoverPoint)
 {
     FVector PlayerPosition = Player->GetActorLocation();
     FVector CoverPointPosition = CoverPoint->GetActorLocation();
 
+    // Check if the cover point is within the invalidation radius of the player
+    float DistanceToPlayer = FVector::Dist(PlayerPosition, CoverPointPosition);
+    if (DistanceToPlayer <= InvalidationRadius)
+    {
+        //if (GEngine)
+        //{
+        //    GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Red, TEXT("Cover point invalid: Too close to player."));
+        //}
+        return false;
+    }
+
+
     FHitResult HitResult;
     FCollisionQueryParams CollisionParams;
     CollisionParams.AddIgnoredActor(CoverPoint);
     CollisionParams.AddIgnoredActor(NPC);
 
-    // Check if cover point has line of sight to the player
     bool bCoverPointCanSeePlayer = GetWorld()->LineTraceSingleByChannel(HitResult, CoverPointPosition, PlayerPosition, ECC_Visibility, CollisionParams);
 
-    // Visualize the line trace
     DrawDebugLine(GetWorld(), CoverPointPosition, PlayerPosition, FColor::Red, false, 1.0f);
 
-    // Check what the trace hit
     if (bCoverPointCanSeePlayer)
     {
         if (HitResult.GetActor() == Player)
         {
-            // Trace hit the player, so the player can see the cover point
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Red, TEXT("Cover point invalid: Player can see it."));
-            }
+            //if (GEngine)
+            //{
+            //    GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Red, TEXT("Cover point invalid: Player can see it."));
+            //}
             return false;
         }
         else
         {
-            // Trace hit something else, so there's an obstacle
-            if (GEngine)
-            {
-                GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Green, TEXT("Cover point valid: Obstacle between cover and player."));
-            }
+            //if (GEngine)
+            //{
+            //    GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Green, TEXT("Cover point valid: Obstacle between cover and player."));
+            //}
             return true;
         }
     }
     else
     {
-        // Trace did not hit anything, meaning the player cannot see the cover point
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Green, TEXT("Cover point valid: Player cannot see it."));
-        }
+        //if (GEngine)
+        //{
+        //    GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Green, TEXT("Cover point valid: Player cannot see it."));
+        //}
         return true;
     }
 }
