@@ -2,7 +2,7 @@
 
 
 #include "AI/NPCs/NPCCharacter.h"
-#include "AI/NPC_AIController.h"
+//#include "AI/NPC_AIController.h"
 #include "Characters/PlayerCharacter.h"
 #include "Items/Item.h"
 #include "Items/Weapon.h"
@@ -113,12 +113,14 @@ void ANPCCharacter::RecieveDamageFromBullet(FHitResult Hit)
 
 
 		// Deactivate AI controller
+		/*
 		ANPC_AIController* AIController = Cast<ANPC_AIController>(GetController());
 		if (AIController)
 		{
 			AIController->StopMovement();
 			AIController->Destroy();
 		}
+		*/
 	}
 }
 

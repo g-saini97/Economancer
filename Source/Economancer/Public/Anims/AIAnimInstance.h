@@ -29,11 +29,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Character")
 	TObjectPtr<ANPCCharacter> AICharacter;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Character")
-	TObjectPtr<ANPC_AIController> AIController;
+	//UPROPERTY(BlueprintReadOnly, Category = "Character")
+	//TObjectPtr<ANPC_AIController> AIController;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	TObjectPtr<UCharacterMovementComponent> AIMovement;
+	//UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	//TObjectPtr<UCharacterMovementComponent> AIMovement;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement");
 	float xySpeed;// character's speed on the ground
