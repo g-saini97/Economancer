@@ -3,6 +3,7 @@
 
 #include "AI/NPCs/NPCCharacter.h"
 #include "AI/NPC_AIController.h"
+#include "Characters/PlayerCharacter.h"
 #include "Items/Item.h"
 #include "Items/Weapon.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -11,7 +12,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Economancer/DebugMacros.h"
 #include "Kismet/KismetMathLibrary.h"
-
+#include "Kismet/GameplayStatics.h"
 
 ANPCCharacter::ANPCCharacter()
 {
@@ -203,6 +204,23 @@ void ANPCCharacter::PlayDodgeMontage()
 			AnimInstance->Montage_JumpToSection(sectionName, DodgeMontage);
 		}
 
+	}
+}
+
+void ANPCCharacter::Shoot()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Yellow, TEXT("NPC Character SHoot Called"));
+
+	if (equippedWeapon)
+	{
+		AController* AIController = GetController();
+		APlayerCharacter* Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+		if (Player && AIController)
+		{
+			FVector AimDirection = (Player->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			equippedWeapon->ShootAI(AIController, AimDirection);
+		}
 	}
 }
 

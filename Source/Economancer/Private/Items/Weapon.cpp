@@ -161,6 +161,60 @@ void AWeapon::Shoot(AController* playerController)
 
 }
 
+void AWeapon::ShootAI(AController* AIController, FVector AimDirection)
+{
+
+	if (bCanFire)
+	{
+		bCanFire = false;
+		FVector MuzzleLocation = MuzzleComponent->GetComponentLocation();
+		FVector EndPoint = MuzzleLocation + AimDirection * range;
+
+		FHitResult HitResult;
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, EndPoint, ECC_Visibility);
+		if (bHit)
+		{
+			EndPoint = HitResult.ImpactPoint;
+		}
+
+	
+		MuzzleFlash();
+		ShellEject();
+		ShootBullet(EndPoint, AIController);
+		
+
+		
+		const float FireRate = 0.05f;
+		GetWorld()->GetTimerManager().SetTimer(ShootTimerHandle, this, &AWeapon::ResetChamber, FireRate, false);
+	}
+}
+
+// brings in the direction of the target when the npc will be shooting from the NPCAIController
+void AWeapon::StartAIShooting(AController* AIController, FVector AimDirection)
+{
+	AIOwnerController = AIController;
+	AIAimDirection = AimDirection;
+
+	ShootAI(AIController, AIAimDirection);
+}
+
+void AWeapon::StopAIShooting()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, TEXT("STOP Shooting called"));
+
+	shotsTaken = 0.f;
+	//GetWorld()->GetTimerManager().ClearTimer(ShootTimerHandle);
+}
+
+// Redundant, remove if not needed by the end
+void AWeapon::AIShootTick()
+{
+	if (AIOwnerController)
+	{
+		ShootAI(AIOwnerController, AIAimDirection);
+	}
+}
+
 void AWeapon::MuzzleFlash()
 {
 	if (MuzzleVfxComponent) // Muzzle flash happens here.
@@ -179,10 +233,9 @@ void AWeapon::ShellEject()
 
 AActor* AWeapon::ShootBullet(FVector Endpoint, AController* playerController)
 {
-
+	bShotFired = true;
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Instigator = playerController->GetPawn();
-	bShotFired = true;
 	AActor* SpawnActor = GetWorld()->SpawnActor<ABullet>(BulletType, MuzzleComponent->GetComponentLocation(), (Endpoint - MuzzleComponent->GetComponentLocation()).Rotation(), SpawnParams);
 	++shotsTaken;
 	 // the weapon animinstance needs to see this.
@@ -236,10 +289,6 @@ void AWeapon::AttatchToPlayerSocket(TObjectPtr<USceneComponent> inParent, const 
 	RootComponent->AttachToComponent(inParent, transformRules, inSocketName); // Always atatch the root component while equiping, if i do it to the mesh, it decoupls from the weapon and leaves it behind when the player moves.
 }
 
-bool AWeapon::IsFiring() const
-{
-	return bShotFired;
-}
 
 void AWeapon::CreateFields(const FHitResult& hit)
 {
@@ -251,3 +300,4 @@ void AWeapon::CreateFields(const FHitResult& hit)
 		Field->ApplyStrainField(true, location, 45.f, 5000000.f, 10.f);
 	}
 }
+

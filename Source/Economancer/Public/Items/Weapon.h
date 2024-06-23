@@ -20,13 +20,18 @@ UCLASS()
 class ECONOMANCER_API AWeapon : public AItem, public IAnimatableWeapon
 {
 	GENERATED_BODY()
+
 public:
 	AWeapon();
 
-	
+	FORCEINLINE virtual bool IsFiring() const { return bShotFired; };
+
 
 	// Need to be public because player has to access it
 	void Shoot(AController* playerController);
+	void ShootAI(AController* AIController, FVector AimDirection);// the NPC Character class needs to be able to access this, the npc state trees need to accsess this as well so that the NPCs can shoot back
+	void StartAIShooting(AController* AIController, FVector AimDirection);
+	void StopAIShooting();
 	void Aim(AController* playerController);
 	void AimEnd();
 	void Equip(TObjectPtr<USceneComponent> inParent, FName(inSocketName));
@@ -34,7 +39,6 @@ public:
 	void TriggerRelease();
 	void AttatchToPlayerSocket(TObjectPtr<USceneComponent> inParent, const FName& inSocketName);
 
-	virtual bool IsFiring() const override;
 
 protected:
 	
@@ -58,7 +62,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	float roundCapacity;
 
-	float shotLimit = 0.f ;
+	float shotLimit = 10.f ;
 	float shotsTaken = 0.f;
 
 	FCollisionQueryParams traceParams;
@@ -72,11 +76,11 @@ protected:
 	void MuzzleFlash();
 	void ShellEject();
 	AActor* ShootBullet(FVector Endpoint, AController* playerController);
-	
-	
+		
 
 	// utility
 	void CreateFields(const FHitResult& hit);
+	void AIShootTick();
 
 private:
 
@@ -100,6 +104,12 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USceneComponent> ShellEjector;
+
+	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
+	FVector AIAimDirection;
+
+	UPROPERTY(EditAnywhere, Category = "ShellVFX", meta = (AllowPrivateAccess = "true"))
+	AController* AIOwnerController;
 
 	TObjectPtr<UFieldSystemComponent> Field;
 	

@@ -28,7 +28,8 @@ public:
 	FORCEINLINE EAIState GetAIState() const { return PlayerState; }
 	FORCEINLINE UAnimMontage* GetMontage() const { return MeleeMontage; }; // make this getAttackMontage later, Note to Self
 	FORCEINLINE UAnimMontage* GetDodgeMontage() const { return DodgeMontage; };
-	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; }
+	FORCEINLINE AWeapon* GetEquippedWeapon() const { return equippedWeapon; };
+	FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; };
 	FORCEINLINE bool GetAimBool() const { return bIsAiming; };
 	FORCEINLINE bool IsAGurad() const { return bIsGuard; };
 	FORCEINLINE bool IsAPatrol() const { return bIsPatrol; };
@@ -61,6 +62,7 @@ public:
 	int DodgeBullet_Implementation() override;
 	
 	void PlayDodgeMontage();
+	void Shoot();
 	
 	UFUNCTION(BlueprintCallable) // Need to call this in the Anim BP
 	void DodgeEnd();
