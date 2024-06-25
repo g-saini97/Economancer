@@ -7,7 +7,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/PrimitiveComponent.h" 
 #include "Characters/PlayerCharacter.h"
-#include "AI/NPCs/NPCCharacter.h"
+#include "AI/NPCs/EnemyNPC.h"
 
 
 AItem::AItem()
@@ -37,9 +37,9 @@ void AItem::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Ot
 	{
 		PlayerCharacter->SetOverlappingItem(this);
 	}
-	if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor)) // Note to self, Store the reference to the NPC character as well , later
+	if (TObjectPtr<AEnemyNPC> NPC= Cast<AEnemyNPC>(OtherActor)) // Note to self, Store the reference to the NPC character as well , later
 	{
-		NPCCharacter->SetOverlappingItem(this);
+		NPC->SetOverlappingItem(this);
 	}
 }
 
@@ -53,10 +53,10 @@ void AItem::onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	if (TObjectPtr<APlayerCharacter> playerChatacter = Cast<APlayerCharacter>(OtherActor))
 	{
 		playerChatacter->SetOverlappingItem(nullptr); //sending null ptr to the character since the character is responsible for attacthment
-	}											// so that the player cannot pick it up after they have stopped overlapping with the item
-	if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor))
+	}											// so that the player cannot keep pickicg up an item after they have stopped overlapping with the item.
+	if (TObjectPtr<AEnemyNPC> NPC = Cast<AEnemyNPC>(OtherActor))
 	{
-		NPCCharacter->SetOverlappingItem(nullptr);
+		NPC->SetOverlappingItem(nullptr);
 	}
 }
 

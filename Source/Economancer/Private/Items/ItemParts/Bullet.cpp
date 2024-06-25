@@ -2,7 +2,7 @@
 
 
 #include "Items/ItemParts/Bullet.h"
-#include "AI/NPCs/NPCCharacter.h"
+#include "AI/NPCs/EnemyNPC.h"
 #include "Characters/PlayerCharacter.h"
 #include "Components/PrimitiveComponent.h" 
 #include "Components/SphereComponent.h"
@@ -56,9 +56,6 @@ void ABullet::BeginPlay()
 	}
 }
 
-
-
-
 void ABullet::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -72,30 +69,23 @@ void ABullet::Tick(float DeltaTime)
 
 void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	Destroy();
 	// Check if the other actor exists
 	if (OtherActor)
 	{
 		// If the other actor is an NPC character
-		if (TObjectPtr<ANPCCharacter> NPCCharacter = Cast<ANPCCharacter>(OtherActor))
+		if (TObjectPtr<AEnemyNPC> NPCCharacter = Cast<AEnemyNPC>(OtherActor))
 		{
-			// React to bullet hit for NPCs
+			// React to bullet hit for NPCs, Note to self: Make sure that anything that can be shot has this function in it.
 			NPCCharacter->ReactToBulletHit(SweepResult);
 
-			// Destroy the bullet after hitting an NPC
-			Destroy();
+			
 		}
-		else if (TObjectPtr<APlayerCharacter> PlayerCharacter = Cast<APlayerCharacter>(OtherActor))
+		else if(TObjectPtr<APlayerCharacter> PlayerCharacter = Cast<APlayerCharacter>(OtherActor))
 		{
 			// React to bullet hit for players (if needed)
 			//PlayerCharacter->ReactToBulletHit(SweepResult);
 
-			// Destroy the bullet after hitting a player
-			Destroy();
-		}
-		else
-		{
-			// Destroy the bullet if it hits anything else (like a wall)
-			Destroy();
 		}
 	}
 	else

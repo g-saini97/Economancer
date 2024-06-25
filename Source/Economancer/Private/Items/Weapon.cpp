@@ -40,7 +40,7 @@ AWeapon::AWeapon()
 	//Field->SetupAttachment(GetRootComponent());
 }
 
-// overlap declarations
+// overlap declarations, using supers 
 void AWeapon::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	Super::onSphereOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);

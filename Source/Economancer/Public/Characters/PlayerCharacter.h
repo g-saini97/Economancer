@@ -35,6 +35,8 @@ public:
 	FORCEINLINE EPlayerState GetPlayerState() const { return PlayerState; }
 	FORCEINLINE bool GetAimBool() const { return isAiming; };
 	FORCEINLINE AWeapon* GetEquppedWeapon() const{if (equippedWeapon){return equippedWeapon;}else{return nullptr; }} // in case somthing wants to know the weapon that the player is holding.
+
+
 protected:
 	virtual void BeginPlay() override;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
@@ -48,6 +50,7 @@ protected:
 	bool isFalling;
 	bool doOnceJump = true;
 	
+	/// Will bring these bools up to standard by adding the b prefix, later.
 	bool doOnceShoot = false;
 	bool doOnceAim = true;
 	bool isZooming;

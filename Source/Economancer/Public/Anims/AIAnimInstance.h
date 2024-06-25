@@ -8,9 +8,9 @@
 #include "AIAnimInstance.generated.h"
 
 
-class ANPCCharacter;
+class AEnemyNPC;
 class UCharacterMovementComponent;
-class ANPC_AIController;
+class AEnemyAIController;
 /**
  * 
  */
@@ -27,13 +27,13 @@ public:
 	FRotator calculateYawPitch();
 
 	UPROPERTY(BlueprintReadOnly, Category = "Character")
-	TObjectPtr<ANPCCharacter> AICharacter;
+	TObjectPtr<AEnemyNPC> AICharacter;
 
-	//UPROPERTY(BlueprintReadOnly, Category = "Character")
-	//TObjectPtr<ANPC_AIController> AIController;
+	UPROPERTY(BlueprintReadOnly, Category = "Character")
+	TObjectPtr<AEnemyAIController> AIController;
 
-	//UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	//TObjectPtr<UCharacterMovementComponent> AIMovement;
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	TObjectPtr<UCharacterMovementComponent> AIMovement;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement");
 	float xySpeed;// character's speed on the ground

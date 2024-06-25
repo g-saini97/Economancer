@@ -127,7 +127,7 @@ void ANPCCharacter::RecieveDamageFromBullet(FHitResult Hit)
 
 
 // INterface implementations 
-void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a raycasted weapon
+void ANPCCharacter::GetShot(const FHitResult& hit) 
 
 {
 	Health -= 50;
@@ -145,7 +145,7 @@ void ANPCCharacter::GetShot(const FHitResult& hit) /// use if bing hit with a ra
 	}
 
 
-}  /// use if bing hit with a raycasted weapons
+} 
 
 
 int ANPCCharacter::MeleeAttack_Implementation()
