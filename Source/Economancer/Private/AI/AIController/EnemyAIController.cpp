@@ -12,6 +12,7 @@
 #include "AI/NPCs/EnemyNPC.h"
 #include "Characters/PlayerCharacter.h"
 #include "GameFramework/Actor.h"
+#include "Kismet/KismetMathLibrary.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -21,11 +22,22 @@ AEnemyAIController::AEnemyAIController()
 void AEnemyAIController::BeginPlay()
 {
     Super::BeginPlay();
+    Player = Cast<APlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (!IsValid(Player))
+    {
+        UE_LOG(LogTemp, Error, TEXT("PlayerCharacter is null in BeginPlay"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter successfully initialized in BeginPlay"));
+    }
 }
+
 
 void AEnemyAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
+    
     if (AEnemyNPC* NPC = Cast<AEnemyNPC>(InPawn))
     {
         if (UBehaviorTree* BTree = NPC->GetBehaviorTree())
@@ -41,9 +53,21 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 
 void AEnemyAIController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus)
 {
-    if (APlayerCharacter* playerCharacter = Cast<APlayerCharacter>(Actor))
+    if (APlayerCharacter* SeenCharacter = Cast<APlayerCharacter>(Actor))
     {
-        GetBlackboardComponent()->SetValueAsBool("CanSeePlayer", Stimulus.WasSuccessfullySensed());
+        bCanSeePlayer = Stimulus.WasSuccessfullySensed();
+        bHasSeenPlayerOnce = true;
+        GetBlackboardComponent()->SetValueAsBool(FName("HasSeenPlayerOnce"), bHasSeenPlayerOnce);
+        GetBlackboardComponent()->SetValueAsBool("CanSeePlayer", bCanSeePlayer);
+        TArray<AActor*> CoverPoints;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACoverPoint::StaticClass(), CoverPoints);
+        for (AActor* CoverPoint : CoverPoints)
+        {
+            if (ACoverPoint* CP = Cast<ACoverPoint>(CoverPoint))
+            {
+                CP->UpdatePlayerSightStatus(SeenCharacter);
+            }
+        }
     }
 }
 
@@ -55,62 +79,59 @@ void AEnemyAIController::SetupPerceptionSystem()
     if (SightConfig)
     {
         SetPerceptionComponent(*CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("Perception Component")));
-        SightConfig->SightRadius = 500.f;
-        SightConfig->LoseSightRadius = SightConfig->SightRadius + 100.f;
-        SightConfig->PeripheralVisionAngleDegrees = 90.f;
-        SightConfig->SetMaxAge(7.f);
-        SightConfig->AutoSuccessRangeFromLastSeenLocation = SightConfig->SightRadius + 5.f; // keeping this small to keep the last known location of the player in a tighter zone
+        SightConfig->SightRadius = 1800.f;
+        SightConfig->LoseSightRadius = SightConfig->SightRadius + 5.f;
+        SightConfig->PeripheralVisionAngleDegrees = 130.f;
+        SightConfig->SetMaxAge(5.f);
+        SightConfig->AutoSuccessRangeFromLastSeenLocation = 1.f;
         SightConfig->DetectionByAffiliation.bDetectEnemies = true;
         SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
         SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
 
         GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
-        GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &AEnemyAIController::OnTargetDetected); // To call OnTargetDetected when player or item is sensed , OntargetDetected handles what to do when the player is sensed.
-        GetPerceptionComponent()->ConfigureSense(*SightConfig); 
+        GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &AEnemyAIController::OnTargetDetected);
+        GetPerceptionComponent()->ConfigureSense(*SightConfig);
     }
 }
 
 // Note to self: If the NPCs exibit janky cover behaviour, start with the behaviour tree first not here 
 ACoverPoint* AEnemyAIController::FindNearestCoverPoint()
 {
-    if (CurrentCoverPoint)
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn) return nullptr;
+
+    FVector PawnLocation = ControlledPawn->GetActorLocation();
+    TArray<AActor*> CoverPoints;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACoverPoint::StaticClass(), CoverPoints);
+
+    ACoverPoint* BestCoverPoint = nullptr;
+    float NearestDistance = FLT_MAX;
+
+    for (AActor* CoverPoint : CoverPoints)
     {
-        return CurrentCoverPoint;
-    }
-    else 
-    {
-        APawn* ControlledPawn = GetPawn();
-        if (!ControlledPawn) return nullptr;
-
-        FVector PawnLocation = ControlledPawn->GetActorLocation();
-        TArray<AActor*> CoverPoints;
-        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACoverPoint::StaticClass(), CoverPoints);
-
-        ACoverPoint* NearestCoverPoint = nullptr;
-        float NearestDistance = FLT_MAX;
-
-        for (AActor* CoverPoint : CoverPoints)
+        ACoverPoint* CP = Cast<ACoverPoint>(CoverPoint);
+        if (CP && !CP->bIsOccupied && !CP->IsInPlayerSight())
         {
-            ACoverPoint* CP = Cast<ACoverPoint>(CoverPoint);
-            if (CP && !CP->bIsOccupied)
+            float Distance = FVector::Dist(PawnLocation, CoverPoint->GetActorLocation());
+            if (Distance < NearestDistance)
             {
-                float Distance = FVector::Dist(PawnLocation, CoverPoint->GetActorLocation());
-                if (Distance < NearestDistance)
-                {
-                    NearestDistance = Distance;
-                    NearestCoverPoint = CP;
-                }
+                NearestDistance = Distance;
+                BestCoverPoint = CP;
             }
         }
-
-        if (NearestCoverPoint)
-        {
-            OccupyCoverPoint(NearestCoverPoint);
-        }
-        return NearestCoverPoint;
+    }
+    if (BestCoverPoint)
+    {
+        VacateCoverPoint();
+        OccupyCoverPoint(BestCoverPoint);
     }
     
+   
+    
+    return BestCoverPoint;
 }
+
+
 
 void AEnemyAIController::OccupyCoverPoint(ACoverPoint* CoverPoint)
 {
@@ -130,4 +151,27 @@ void AEnemyAIController::VacateCoverPoint()
         CurrentCoverPoint = nullptr;
     }
 }
+
+
+
+void AEnemyAIController::UpdateTargetLocation()
+{
+   
+    if (bCanSeePlayer)
+    {
+        FVector PlayerLocation = Player->GetActorLocation();
+        CalculatedTargetLocation = PlayerLocation;
+        LastKnownTargetLocation = PlayerLocation;
+
+        GetBlackboardComponent()->SetValueAsVector("TargetLocation", PlayerLocation);
+        
+    }
+    else
+    {
+        GetBlackboardComponent()->SetValueAsVector("TargetLocation", LastKnownTargetLocation);
+    }
+}
+
+
+
 

@@ -36,6 +36,14 @@ AWeapon::AWeapon()
 	ShellEjectionComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellEjection component"));
 	ShellEjectionComponent->SetupAttachment(GetRootComponent());
 	
+	MagazineMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MagazineMeshComponent"));
+	MagazineMesh->SetupAttachment(GetRootComponent());
+	
+	MagazineComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Magazine Location"));
+	MagazineComponent->SetupAttachment(GetRootComponent());
+
+	MagMeshLocation = MagazineMesh->GetComponentLocation();
+	
 	Field = CreateDefaultSubobject<UFieldSystemComponent>(TEXT("Field"));
 	//Field->SetupAttachment(GetRootComponent());
 }
@@ -61,6 +69,7 @@ void AWeapon::onSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 void AWeapon::Equip(TObjectPtr<USceneComponent> inParent, FName(inSocketName))
 {
 	AttatchToPlayerSocket(inParent, inSocketName);
+	
 	if (sphere)
 	{
 		sphere->SetCollisionEnabled(ECollisionEnabled::NoCollision); // so that the weapon stops ovelapping after pickup.
@@ -78,7 +87,7 @@ void AWeapon::FireModeSelect()
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Burst"));
 		break;
 	case EWeaponFireMode::EWFM_Auto:
-		shotLimit = 9.f;
+		shotLimit = magCapacity - 1.f;
 		FireMode = EWeaponFireMode::EWFM_Single;
 		if (GEngine)
 			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Auto"));
@@ -102,7 +111,7 @@ void AWeapon::Shoot(AController* playerController)
 {
 	
 
-	if (bCanFire)
+	if (bCanFire && loadedRounds >= 1)
 	{
 		bCanFire = false;
 		FVector cameraLocation;
@@ -124,9 +133,8 @@ void AWeapon::Shoot(AController* playerController)
 		}
 		if (shotsTaken <= shotLimit)
 		{
-			MuzzleFlash();
-			ShellEject();
-			ShootBullet(EndPoint, playerController);
+			ShootBullet(DamageDealt,EndPoint, playerController);
+			loadedRounds--; // bullet count goes down, gotta implement bullet pickups 
 		}
 		const float FireRate = 0.05f;
 		GetWorld()->GetTimerManager().SetTimer(ShootTimerHandle, this, &AWeapon::ResetChamber, FireRate, false);
@@ -158,16 +166,26 @@ void AWeapon::Shoot(AController* playerController)
 			}
 		}*/
 	}
+	else if (loadedRounds <= 0)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("RELOAD")));
+		}
+	}
 
 }
 
 void AWeapon::ShootAI(AController* AIController, FVector AimDirection)
 {
-
 	if (bCanFire)
 	{
 		bCanFire = false;
 		FVector MuzzleLocation = MuzzleComponent->GetComponentLocation();
+
+		// Add randomness to the aim direction
+		AimDirection = AddBulletSpread(AimDirection);
+
 		FVector EndPoint = MuzzleLocation + AimDirection * range;
 
 		FHitResult HitResult;
@@ -177,14 +195,9 @@ void AWeapon::ShootAI(AController* AIController, FVector AimDirection)
 			EndPoint = HitResult.ImpactPoint;
 		}
 
-	
-		MuzzleFlash();
-		ShellEject();
-		ShootBullet(EndPoint, AIController);
-		
+		ShootBullet(DamageDealt,EndPoint, AIController);
 
-		
-		const float FireRate = 0.05f;
+		const float FireRate = 0.0005f;
 		GetWorld()->GetTimerManager().SetTimer(ShootTimerHandle, this, &AWeapon::ResetChamber, FireRate, false);
 	}
 }
@@ -231,16 +244,53 @@ void AWeapon::ShellEject()
 	}
 }
 
-AActor* AWeapon::ShootBullet(FVector Endpoint, AController* playerController)
+AActor* AWeapon::ShootBullet(float Damage,FVector Endpoint, AController* Controller)
 {
+
 	bShotFired = true;
 	FActorSpawnParameters SpawnParams;
-	SpawnParams.Instigator = playerController->GetPawn();
-	AActor* SpawnActor = GetWorld()->SpawnActor<ABullet>(BulletType, MuzzleComponent->GetComponentLocation(), (Endpoint - MuzzleComponent->GetComponentLocation()).Rotation(), SpawnParams);
-	++shotsTaken;
-	 // the weapon animinstance needs to see this.
-	return SpawnActor;
-	
+	SpawnParams.Instigator = Controller->GetPawn();
+
+	FVector MuzzleLocation = MuzzleComponent->GetComponentLocation();
+	FRotator BulletRotation = (Endpoint - MuzzleLocation).Rotation();
+
+	// Ensure the spawn location is clear
+	FHitResult HitResult;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.AddIgnoredActor(Controller->GetPawn());
+
+	bool bClear = !GetWorld()->LineTraceSingleByChannel(HitResult, MuzzleLocation, MuzzleLocation + BulletRotation.Vector() * 10.f, ECC_Visibility, Params);
+	if (bClear)
+	{
+		AActor* SpawnActor = GetWorld()->SpawnActor<ABullet>(BulletType, MuzzleLocation, BulletRotation, SpawnParams);
+		if (SpawnActor)
+		{
+			++shotsTaken;
+
+			ABullet* SpawnedBullet = Cast<ABullet>(SpawnActor);
+			if (SpawnedBullet)
+			{
+				MuzzleFlash();
+				ShellEject();
+				SpawnedBullet->SetDamageDealt(DamageDealt);
+			}
+			return SpawnActor;
+		}
+	}
+	else
+	{
+		bShotFired = false; // no shot fired if bullet spawn point is invalid,  this bool stops the weapon's anim instance from animating
+	}
+	return nullptr;
+}
+
+FVector AWeapon::AddBulletSpread(FVector AimDirection)
+{
+	FRotator AimRot = AimDirection.Rotation();
+	AimRot.Yaw += FMath::RandRange(-MaxBulletSpread, MaxBulletSpread);
+	AimRot.Pitch += FMath::RandRange(-MaxBulletSpread, MaxBulletSpread);
+	return AimRot.Vector();
 }
 
 void AWeapon::ResetChamber()
@@ -249,10 +299,80 @@ void AWeapon::ResetChamber()
 	bCanFire = true;
 }
 
-
 void AWeapon::TriggerRelease()
 {
 	shotsTaken = 0.f;
+}
+
+void AWeapon::ReloadWeapon()
+{
+	
+	float roundsNeeded = magCapacity - loadedRounds; // to check if the player actually needs to reload, otherwise spamming reload causes anim spam even at full magazines
+
+	if (roundsInInventory > 0 && roundsNeeded > 0) 
+	{
+		float roundsToReload = FMath::Min(roundsNeeded, roundsInInventory); // the amount of rounds needed for the reload, in case the rounds in inventory are less that the rounds required to fill the magazine or something 
+
+		loadedRounds += roundsToReload; // Add the rounds to the loaded rounds
+
+		roundsInInventory -= roundsToReload; // Subtracting rounds from the inventory
+
+
+		// Debug message for testing
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("Reloaded %f rounds. LoadedRounds: %f, RoundsInInventory: %f"), roundsToReload, loadedRounds, roundsInInventory));
+		}
+
+		// Detach and drop the current magazine
+		DetachAndDropMagazine();
+
+		// Attach a new magazine
+		AttachNewMagazine();
+	}
+	else
+	{
+		// Debug message for testing
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Cannot reload, either inventory is empty or magazine is full."));
+		}
+	}
+}
+
+void AWeapon::DetachAndDropMagazine()
+{
+	if (MagazineMesh)
+	{
+		// Detach the magazine from the weapon
+		MagazineMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+		// Spawn a new actor for the dropped magazine
+		if (MagazineType)
+		{
+			FActorSpawnParameters SpawnParams;
+			FVector SpawnLocation = MagazineMesh->GetComponentLocation();
+			FRotator SpawnRotation = MagazineMesh->GetComponentRotation();
+
+			GetWorld()->SpawnActor<AActor>(MagazineType, SpawnLocation, SpawnRotation, SpawnParams);
+		}
+
+		// Hide the current magazine mesh
+		MagazineMesh->SetVisibility(false);
+	}
+}
+
+void AWeapon::AttachNewMagazine()
+{
+	if (MagazineMesh)
+	{
+		// Reattach a new magazine to the weapon
+		MagazineMesh->AttachToComponent(MagazineComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+
+		MagazineMesh->SetRelativeScale3D(FVector(1.375, 1.5,1.5)); // I modeled the gun a little smaller in blender by mistake, had to scale it up int he editor, these are the scale values for the model that I set in the editor, could have scalled up the ipmorted mesh but do not feel like booting up blender right now.
+		// Show the new magazine mesh
+		MagazineMesh->SetVisibility(true);
+	}
 }
 
 void AWeapon::Aim(AController* playerController)
@@ -285,10 +405,15 @@ void AWeapon::AimEnd()
 
 void AWeapon::AttatchToPlayerSocket(TObjectPtr<USceneComponent> inParent, const FName& inSocketName)
 {
+	roundsInInventory += roundsOnPickUp; // adds the pickup rounds to the inventory of the gun
+	roundsOnPickUp = 0.f; // then sets the pickup amount to zero in case the player drops and picks up the weapon again.
 	FAttachmentTransformRules transformRules(EAttachmentRule::SnapToTarget, true);
 	RootComponent->AttachToComponent(inParent, transformRules, inSocketName); // Always atatch the root component while equiping, if i do it to the mesh, it decoupls from the weapon and leaves it behind when the player moves.
 }
 
+void AWeapon::UpdatePlayerHUD()
+{
+}
 
 void AWeapon::CreateFields(const FHitResult& hit)
 {

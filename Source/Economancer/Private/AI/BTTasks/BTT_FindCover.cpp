@@ -36,12 +36,7 @@ EBTNodeResult::Type UBTT_FindCover::ExecuteTask(UBehaviorTreeComponent& OwnerCom
     if (BlackboardComp)
     {
         BlackboardComp->SetValueAsVector("CoverLocation", CoverPoint->GetActorLocation());
-        BlackboardComp->SetValueAsObject("CoverPoint", CoverPoint);
-
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("Cover Location Found: %s"), *CoverPoint->GetName()));
-        }
+        //BlackboardComp->SetValueAsObject("CoverPoint", CoverPoint);
     }
 
     return EBTNodeResult::Succeeded;

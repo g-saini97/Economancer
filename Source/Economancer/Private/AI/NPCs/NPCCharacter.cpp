@@ -31,7 +31,7 @@ ANPCCharacter::ANPCCharacter()
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 
-	bIsAiming = false; /// the NPC_AIcontroller will need to be able to change this. The AI anim instance needs to be able to read this
+	bIsAiming = false; /// the AI controller for the NPC will need to be able to change this. The AI anim instance needs to be able to read this
 }
 
 

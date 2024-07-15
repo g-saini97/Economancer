@@ -5,14 +5,17 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/InputComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Items/Item.h"
 #include "Items/Weapon.h"
 #include "DrawDebugHelpers.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
-
+#include "HUD/BarryBHUD.h"
+#include "HUD/PlayerOverlay.h"
 
 
 APlayerCharacter::APlayerCharacter()
@@ -31,7 +34,6 @@ APlayerCharacter::APlayerCharacter()
 	//Setting up components
 	springArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	springArm->SetupAttachment(GetRootComponent());
-	springArm->TargetArmLength = springArmDefault;
 
 	camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	camera->SetupAttachment(springArm);
@@ -41,17 +43,29 @@ APlayerCharacter::APlayerCharacter()
 	SetupStimulusSource();
 }
 
+
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Enhanced input subsystem setup
-	if (TObjectPtr<APlayerController> PlayerController = Cast<APlayerController>(GetController()))
+	// Enhanced input subsystem AND HUD setup
+	PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
 	{
 		if (TObjectPtr<UEnhancedInputLocalPlayerSubsystem> Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(inputMapContext, 0);
 		}
+		ABarryBHUD* PlayerHUD = Cast<ABarryBHUD>(PlayerController->GetHUD());
+		if (PlayerHUD)
+		{
+			PlayerOverlay = PlayerHUD->GetPlayerOverlay();
+			if (PlayerOverlay)
+			{
+				PlayerOverlay->SetHealthBarPercentage(45.f);		
+			}
+		}
+
 	}
 
 
@@ -69,7 +83,6 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 
 	controllerOrientationLockChecker(); // stops player form roating while not grounded
-	wallJumpChecker();
 	ZoomFollowCamera(DeltaTime);
 
 
@@ -99,10 +112,11 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 		
 		// bindings to prevent contineous jumping from the space bar being held down
-		enhancedComponent->BindAction(jumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		enhancedComponent->BindAction(jumpAction, ETriggerEvent::Completed, this, &APlayerCharacter::CustomJumpEnd);
-		enhancedComponent->BindAction(jumpAction, ETriggerEvent::Triggered, this, &APlayerCharacter::CustomJump);
+		enhancedComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		enhancedComponent->BindAction(DodgeAction, ETriggerEvent::Completed, this, &APlayerCharacter::CustomJumpEnd);
+		enhancedComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &APlayerCharacter::CustomJump);
 		enhancedComponent->BindAction(holsterAction, ETriggerEvent::Completed, this, &APlayerCharacter::Holster);
+		enhancedComponent->BindAction(ReloadAction, ETriggerEvent::Completed, this, &APlayerCharacter::ReloadEquippedWeapon);
 
 
 	}
@@ -159,8 +173,14 @@ void APlayerCharacter::Pickup(const FInputActionValue& value)
 		overlappingWeapon->Equip(GetMesh(), FName("Hand_RSocket"));
 		overlappingItem = nullptr; // setting ovelapping item to nullptr because it kept pointing to the weapon currently euiped and player could not pickup a new weapon if they had picked one up already.
 		equippedWeapon = overlappingWeapon;
+
+		// these two will be repeated where ever there is a chance for the the round count to update, so whatch out and think before removing them as repeated code.
+		PlayerOverlay->SetRoundsInMag(equippedWeapon->GetLoadedRounds());
+		PlayerOverlay->SetTotalRounds(equippedWeapon->GetRoundsInInventory());
+
+
 		availibleWeapons.Add(equippedWeapon);
-		PlayerState = EPlayerState::EPS_EquippedOneHanded;
+		PlayerState = EPlayerState::EPS_EquippedOneHanded; // will make the equpped weapon responsible for this later.
 		if (GEngine)
 			GEngine->AddOnScreenDebugMessage(-1, 0.4f, FColor::Yellow, TEXT("SwitchPressed"));
 		if (PlayerState != EPlayerState::EPS_Uneqipped)
@@ -203,10 +223,6 @@ void APlayerCharacter::ZoomFollowCamera(float DeltaTime)
 	this->camera->SetRelativeRotation(NewRotation);
 }
 
-
-
-
-
 void APlayerCharacter::AimEnd(const FInputActionValue& value)
 {
 	isAiming = false;
@@ -217,7 +233,6 @@ void APlayerCharacter::AimEnd(const FInputActionValue& value)
 		equippedWeapon->AimEnd();
 	}
 }
-
 
 void APlayerCharacter::SwitchFireMode(const FInputActionValue& value)
 {
@@ -235,6 +250,10 @@ void APlayerCharacter::AttackStart(const FInputActionValue& value)
 	if (canShoot() && isAiming)
 	{
 		equippedWeapon->Shoot(this->GetController());
+
+		// updating the round count in the HUD
+		PlayerOverlay->SetRoundsInMag(equippedWeapon->GetLoadedRounds());
+		PlayerOverlay->SetTotalRounds(equippedWeapon->GetRoundsInInventory());
 	}
 	else if(canShoot())
 	{
@@ -255,6 +274,10 @@ void APlayerCharacter::AttackEnd()
 	if (canShoot())
 	{
 		doOnceShoot = false;
+		
+		// updating the round count in the HUD
+		PlayerOverlay->SetRoundsInMag(equippedWeapon->GetLoadedRounds());
+		PlayerOverlay->SetTotalRounds(equippedWeapon->GetRoundsInInventory());
 	}
 }
 
@@ -298,6 +321,15 @@ void APlayerCharacter::UnHolster()
 		bIsHolstered = false;
 		PlayerState = EPlayerState::EPS_EquippedOneHanded;
 	}
+}
+
+void APlayerCharacter::ReloadEquippedWeapon(const FInputActionValue& value)
+{
+	equippedWeapon->ReloadWeapon();
+	// updating the round count in the HUD
+
+	PlayerOverlay->SetRoundsInMag(equippedWeapon->GetLoadedRounds());
+	PlayerOverlay->SetTotalRounds(equippedWeapon->GetRoundsInInventory());
 }
 
 /// Movement related functions, look furthur for utililty
@@ -380,7 +412,7 @@ void APlayerCharacter::wallSlideJump(FHitResult wallHitResult)
 }
 
 
-// General Utility
+// General Utility and reactions
 
 
 bool APlayerCharacter::canAim() // if aimimg is janky, start Investigating here.
@@ -397,7 +429,7 @@ bool APlayerCharacter::canAim() // if aimimg is janky, start Investigating here.
 
 bool APlayerCharacter::canShoot()
 {
-	if (PlayerState != EPlayerState::EPS_Uneqipped && doOnceShoot && equippedWeapon )
+	if (PlayerState != EPlayerState::EPS_Uneqipped && doOnceShoot && equippedWeapon && !bIsDead )
 	{
 		return true;
 	}
@@ -414,5 +446,39 @@ void APlayerCharacter::SetupStimulusSource()
 	{
 		stimulusSource->RegisterForSense(TSubclassOf<UAISense_Sight>());
 		stimulusSource->RegisterWithPerceptionSystem();
+	}
+}
+
+void APlayerCharacter::ReactToBulletHit(FHitResult Hit, float Damage)
+{
+	DamageTaken = Damage;
+	RecieveBulletDamage(Hit);
+}
+
+void APlayerCharacter::RecieveBulletDamage(FHitResult hit)
+{
+	Health -= DamageTaken;
+	if (PlayerOverlay)
+	{
+		PlayerOverlay->SetHealthBarPercentage(Health / MaxHealth);
+	}
+
+	if (Health <= 0)
+	{
+		bIsDead = true;
+		// to Disable capsule collision and physics, fixes wierd post death ragdoll behaviour 
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SetRootComponent(GetMesh());
+		GetCapsuleComponent()->DestroyComponent();
+		GetCapsuleComponent()->SetSimulatePhysics(false);
+
+		// Enable physics for the mesh and set animation mode to physics
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		GetMesh()->SetAllBodiesSimulatePhysics(true);
+
+		// Apply impulse to simulate hit reaction
+		FVector ImpulseVector = (hit.ImpactPoint - hit.TraceStart).GetSafeNormal();
+		GetMesh()->AddImpulseAtLocation(ImpulseVector * 1000.f, hit.ImpactPoint, hit.BoneName);
 	}
 }

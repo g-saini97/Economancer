@@ -19,12 +19,24 @@ public:
 	ACoverPoint();
 
 	virtual void Tick(float DeltaTime) override;
-
+	
+	UFUNCTION(BlueprintCallable)
 	void Occupy(AEnemyAIController* NewOccupant);
+	
+	UFUNCTION(BlueprintCallable)
 	void Vacate();
+
+	UFUNCTION(BlueprintCallable)
+	bool IsInPlayerSight() const;
+
+	UFUNCTION(BlueprintCallable)
+	void UpdatePlayerSightStatus(AActor* PlayerActor);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover System")
 	bool bIsOccupied;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover System")
+	bool bIsInPlayerSight;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Cover System")
 	AEnemyAIController* Occupant;

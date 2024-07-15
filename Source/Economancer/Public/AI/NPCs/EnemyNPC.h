@@ -15,6 +15,7 @@ class AItem;
 class AWeapon;
 class UAnimMontage;
 
+
 UCLASS()
 class ECONOMANCER_API AEnemyNPC : public ACharacter, public IShotInterFace
 {
@@ -26,7 +27,11 @@ public:
     // Getters and setters, Note to Self: Try keeping all of these inline, pls.
     FORCEINLINE void SetOverlappingItem(TObjectPtr<AItem> Item) { overlappingItem = Item; };// overlapping items have to call this
     FORCEINLINE TObjectPtr<UBehaviorTree> GetBehaviorTree() const { return BehaviorTree; };
+    FORCEINLINE EAIState GetAIState() const { return EqippedState; }
     FORCEINLINE bool GetAimBool() const { return bIsAiming; };
+    FORCEINLINE void SetAimBoolTrue() { bIsAiming = (equippedWeapon) ? true : bIsAiming; } // Going to make a btttask to uses these setters, the animinstance needs to read these in order to play the aim animation, Note To Self.
+    FORCEINLINE void SetAimBoolFalse() { bIsAiming = false; }
+
 
 	virtual void Tick(float DeltaTime) override;
 
@@ -34,12 +39,18 @@ public:
 	// Basic ttributes and properties , will be adding more, i think.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
     float Health = 100.f;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+    bool bIsDead = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Combat");
     bool bIsAiming = false;
 
     UFUNCTION(BlueprintCallable, Category = "Health")
     void RecieveBulletDamage(FHitResult hit);
+
+    UFUNCTION(BlueprintCallable, Category = "Animation")
+    void PlayHitMontage(FName SectionName); // had to make it const , crashed otherwise, NOTE TO SELF: Look into this later
 
     UFUNCTION(BlueprintCallable, Category = "Health")
     void PickUpWeapon();
@@ -74,6 +85,9 @@ private:
 
     UPROPERTY(VisibleAnywhere)
     TArray<AWeapon*> availibleWeapons;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    UAnimMontage* HitMontage;
 
 
 };

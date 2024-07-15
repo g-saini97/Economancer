@@ -20,7 +20,8 @@ public class Economancer : ModuleRules
 			"GameplayTasks",
 			"NavigationSystem",
             "GameplayStateTreeModule",
-            "StateTreeModule"
+            "StateTreeModule",
+			"UMG"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

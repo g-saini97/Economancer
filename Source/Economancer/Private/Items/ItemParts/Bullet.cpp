@@ -69,8 +69,14 @@ void ABullet::Tick(float DeltaTime)
 
 void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Destroy();
-	// Check if the other actor exists
+
+	// Spawn hit impact effect
+	if (HitImpactVFXSystem)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitImpactVFXSystem, SweepResult.ImpactPoint, FRotationMatrix::MakeFromX(SweepResult.ImpactNormal).Rotator());
+	}
+	DestoryBullet(); // destroy bullets on overlap, will figure penetration later. 
+
 	if (OtherActor)
 	{
 		// If the other actor is an NPC character
@@ -84,7 +90,7 @@ void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		else if(TObjectPtr<APlayerCharacter> PlayerCharacter = Cast<APlayerCharacter>(OtherActor))
 		{
 			// React to bullet hit for players (if needed)
-			//PlayerCharacter->ReactToBulletHit(SweepResult);
+			PlayerCharacter->ReactToBulletHit(SweepResult, DamageDealt);
 
 		}
 	}
@@ -93,7 +99,7 @@ void ABullet::onSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* 
 		// If the other actor is not the bullet mesh or collision, destroy the bullet
 		if (OtherComp && OtherComp != BulletMesh && OtherComp != BulletCollision)
 		{
-			Destroy();
+			DestoryBullet();
 		}
 	}
 }
